@@ -56,6 +56,7 @@ maxVol = 0.06
 
 #-------Test Variables--------------->
 #--->ADX (INC)
+#Hello
 useADX = False
 setADX = "TBD"
 #--->EMA
