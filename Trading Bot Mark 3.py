@@ -48,7 +48,7 @@ use6MG = False
 setMin6MG = 0.1
 setMed6MG = 0.20
 setHigh6MG = 0.36
-
+#hello
 #--->Volatility
 useVol = True
 minVol = 0.015
