@@ -8,7 +8,7 @@ cursor = conn.cursor()
 
 #create a table
 cursor.execute('''
-    CREATE TABLE StockData (
+    CREATE TABLE IF NOT EXISTS HourlyData (
         symbol TEXT NOT NULL,
         date TEXT NOT NULL,
         open REAL NOT NULL,
@@ -17,9 +17,21 @@ cursor.execute('''
         close REAL NOT NULL,
         volume REAL NOT NULL
     )
-    
 ''')
-
 cursor.execute('''
-    CREATE INDEX idx_date_symbol ON StockData(date, symbol)
+    CREATE TABLE IF NOT EXISTS DailyData (
+        symbol TEXT NOT NULL,
+        date TEXT NOT NULL,
+        open REAL NOT NULL,
+        high REAL NOT NULL,
+        low REAL NOT NULL,
+        close REAL NOT NULL,
+        volume REAL NOT NULL
+    )
+''')
+cursor.execute('''
+    CREATE INDEX IF NOT EXISTS idx_hourly_symbol ON HourlyData(date, symbol)
+''')
+cursor.execute('''
+    CREATE INDEX IF NOT EXISTS idx_daily_symbol ON DailyData(date, symbol)
 ''')

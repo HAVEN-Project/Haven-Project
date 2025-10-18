@@ -7,10 +7,13 @@ required_cols = ['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']
 tickers = ["TSLA", "NVDA", "GOOGL"]
 start_date = "2023-10-18"
 end_date = "2025-10-17"
+download_interval = "1h" # hourly (1h) daily is (1d)
 
 # Database configuration
 DB_NAME = "StockData.db"
-TABLE_NAME = "StockData"
+TABLE_NAME = "HourlyData"
+if (download_interval == "1d"):
+    TABLE_NAME = "DailyData"
 
 # Download data for all tickers at once
 attempts = 0
@@ -19,7 +22,7 @@ data = None
 while attempts < 3:
     try:
         # Download with date range
-        data = yf.download(tickers, period="max", group_by='ticker', interval="1h")
+        data = yf.download(tickers, period="max", group_by='ticker', interval=download_interval)
         print("Download successful!")
         break
     except Exception as e:
@@ -82,6 +85,23 @@ if data is not None and not data.empty:
     print("\n" + "="*50)
     print("Combined DataFrame columns:", final_df.columns.tolist())
     print("="*50)
+    
+    # Remove rows with missing data
+    rows_before = len(final_df)
+    
+    # Option 2: Remove rows where specific important columns have missing data (uncomment if preferred)
+    final_df = final_df.dropna(subset=['date', 'open', 'high', 'low', 'close', 'volume'])
+    
+    
+    rows_after = len(final_df)
+    rows_removed = rows_before - rows_after
+    
+    if rows_removed > 0:
+        print(f"\n✓ Removed {rows_removed} rows with missing data")
+        print(f"  Rows before: {rows_before}")
+        print(f"  Rows after: {rows_after}")
+    else:
+        print("\n✓ No rows with missing data found")
     
     # Reorder columns to match required_cols
     available_cols = [col for col in required_cols if col in final_df.columns]
