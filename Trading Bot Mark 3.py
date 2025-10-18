@@ -16,7 +16,7 @@ from alpaca.trading.enums import AssetClass
 import time
 from datetime import datetime
 import sys, select
-
+#Hellooooo
 
 trading_client = TradingClient("PK58DWB3ETACZRPLDKWY","3efM2Riaz99eaM4uqIybfcsoETRa2dorppZbEJkY", paper=True)
 
