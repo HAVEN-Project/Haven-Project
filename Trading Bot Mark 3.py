@@ -319,11 +319,11 @@ def fruit_picker(df, ticker_symbol, buy_price):
     close = df["Close"].squeeze()
 
     # Indicators
-    rsi = ta.momentum.RSIIndicator(close, window=swin[RSI]).rsi().iloc[-1]
-    sma_20 = close.rolling(window=swin[sma_20]).mean().iloc[-1]
-    sma_50 = close.rolling(window=swin [sma_50]).mean().iloc[-1]
-    adx = ta.trend.ADXIndicator(df["High"].squeeze(), df["Low"].squeeze(), close, window=swin[ADX]).adx().iloc[-1]
-    momentum = ta.momentum.ROCIndicator(close, window=swin[momentum]).roc().iloc[-1]
+    rsi = ta.momentum.RSIIndicator(close, window=swin["RSI"]).rsi().iloc[-1]
+    sma_20 = close.rolling(window=swin["sma_20"]).mean().iloc[-1]
+    sma_50 = close.rolling(window=swin ["sma_50"]).mean().iloc[-1]
+    adx = ta.trend.ADXIndicator(df["High"].squeeze(), df["Low"].squeeze(), close, window=swin["ADX"]).adx().iloc[-1]
+    momentum = ta.momentum.ROCIndicator(close, window=swin["momentum"]).roc().iloc[-1]
     current_price = close.iloc[-1]
 
     #  Exit thresholds
@@ -1042,11 +1042,12 @@ while True:#MENU
             low = df["Low"].squeeze()
 
             # === Indicators ===
-            rsi = ta.momentum.RSIIndicator(close, window=14).rsi().iloc[-1]
-            sma_20 = close.rolling(20).mean().iloc[-1]
-            sma_50 = close.rolling(50).mean().iloc[-1]
-            ema_20 = ta.trend.EMAIndicator(close, window=20).ema_indicator().iloc[-1]
+            rsi = ta.momentum.RSIIndicator(close, window=bwin["RSI_WINDOW"]).rsi().iloc[-1]
+            sma_20 = close.rolling(bwin["SMA_SHORT"]).mean().iloc[-1]
+            sma_50 = close.rolling(bwin["SMA_LONG"]).mean().iloc[-1]
+            ema_20 = ta.trend.EMAIndicator(close, window=bwin["EMA_WINDOW"]).ema_indicator().iloc[-1]
 
+            # MACD is left as is (or you can remove if not used)
             macd_line = ta.trend.MACD(close).macd().iloc[-1]
             signal_line = ta.trend.MACD(close).macd_signal().iloc[-1]
 
@@ -1054,19 +1055,18 @@ while True:#MENU
                 high=high,
                 low=low,
                 close=close,
-                window=14,
-                smooth_window=3
+                window=bwin["STOCH_WINDOW"],
+                smooth_window=bwin["STOCH_SMOOTH"]
             ).stoch().iloc[-1]
 
-            momentum = ta.momentum.ROCIndicator(close, window=10).roc().iloc[-1]
+            momentum = ta.momentum.ROCIndicator(close, window=bwin["MOMENTUM_WINDOW"]).roc().iloc[-1]
 
             growth_3mo = (close.iloc[-1] - close.iloc[-63]) / close.iloc[-63]
             growth_6mo = (close.iloc[-1] - close.iloc[-126]) / close.iloc[-126]
             growth_1yr = (close.iloc[-1] - close.iloc[-220]) / close.iloc[-220]
 
-            volatility = close.pct_change().rolling(20).std().iloc[-1]
-
-            adx = ta.trend.ADXIndicator(high, low, close, window=14).adx().iloc[-1]
+            volatility = close.pct_change().rolling(bwin["VOLATILITY_WINDOW"]).std().iloc[-1]
+            adx = ta.trend.ADXIndicator(high, low, close, window=bwin["ADX_WINDOW"]).adx().iloc[-1]
 
             current_price = close.iloc[-1]
         except:
