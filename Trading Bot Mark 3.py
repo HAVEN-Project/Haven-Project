@@ -24,82 +24,118 @@ console = Console(force_terminal=True)
 trading_client = TradingClient("PK58DWB3ETACZRPLDKWY","3efM2Riaz99eaM4uqIybfcsoETRa2dorppZbEJkY", paper=True)
 #endregion
 
-#region Adjustable variables
-#Buying Indicators (INC) means fully written in and operational
-#---> RSI (INC)
-useRSI = True
-minRSI = 40
-maxRSI = 70
-#--->SMA (INC)
-useSMA20_50 = True
-#--->Momentum (INC)
-useMomentum = False
-minMomentum = "TBD"
-#--->Month(s) Growth
-    #(3 Months) (INC)
-use3MG = True
-setMin3Month_Growth = 0.18
-setMed3Month_Growth = 0.23
-setHigh3Month_Growth = 0.28
-    #(1 year)
-use1YG = True
-setMin1yr = 0.01
-setMed1yr = 0.25
-setHigh1yr = 0.35
-    #(6 Months)
-use6MG = False
-setMin6MG = 0.1
-setMed6MG = 0.20
-setHigh6MG = 0.36
-#hello
-#--->Volatility
-useVol = True
-minVol = 0.015
-maxVol = 0.06
 
-#-------Test Variables--------------->
-#--->ADX (INC)
-useADX = False
-setADX = "TBD"
-#--->EMA
-useEMA = False
-minEMA = 0.02 # This is the ratio of (EMA_20/CurrentPrice) Shows if there is a bullish price
+#region Buying Indicators (INC) means fully written in and operational
 
-#--->MAC-D
-useMACD = False
-#minMACD = "TBD" (For now we dont need min or max settings for macD)
-#maxMACD = "TBD"
-#--->Stochastic Oscillator
-useSO = False
-minSO = 20
-maxSO = 80
+#region -------Buying Indicators--------  NOT INTEGRATED YET
+bind = {} #Buying Indicators Dictionary
 
-#Firm(s) Signals
-useFirmSignals = False
+# ---> RSI
+bind["useRSI"] = True
+bind["minRSI"] = 40
+bind["maxRSI"] = 70
 
-## === CONFIGURABLE INDICATOR BUYING WINDOWS ===
-B_RSI_WINDOW = 14
-B_SMA_SHORT = 20
-B_SMA_LONG = 50
-B_ADX_WINDOW = 14
-B_MOMENTUM_WINDOW = 10
-B_VOLATILITY_WINDOW = 20
-B_EMA_WINDOW = 20
-B_STOCH_WINDOW = 14
-B_STOCH_SMOOTH = 3
-#------------------------------------------->
-#Selling Indicators
-setStopLoss = -0.07
-setTakeProfit = 0.13
-useRSISell = True
-maxRSISell = 70
-useSMASell = True
-useMomentumeSell = True
-minMomentumSell = 30
-useADXSell = True
-minADXSell = 20
+# ---> SMA (INC)
+bind["useSMA20_50"] = True
 
+# ---> Momentum (INC)
+bind["useMomentum"] = False
+bind["minMomentum"] = "TBD"
+
+# ---> Month(s) Growth
+# (3 Months) (INC)
+bind["use3MG"] = True
+bind["setMin3Month_Growth"] = 0.18
+bind["setMed3Month_Growth"] = 0.23
+bind["setHigh3Month_Growth"] = 0.28
+
+# (1 Year)
+bind["use1YG"] = True
+bind["setMin1yr"] = 0.01
+bind["setMed1yr"] = 0.25
+bind["setHigh1yr"] = 0.35
+
+# (6 Months)
+bind["use6MG"] = False
+bind["setMin6MG"] = 0.1
+bind["setMed6MG"] = 0.20
+bind["setHigh6MG"] = 0.36
+
+# ---> Volatility
+bind["useVol"] = True
+bind["minVol"] = 0.015
+bind["maxVol"] = 0.06
+
+# ---> Test Variables
+# ADX (INC)
+bind["useADX"] = False
+bind["setADX"] = "TBD"
+
+# EMA
+bind["useEMA"] = False
+bind["minEMA"] = 0.02  # ratio of (EMA_20 / CurrentPrice)
+
+# MACD
+bind["useMACD"] = False
+# bind["minMACD"] = "TBD"  # not needed currently
+# bind["maxMACD"] = "TBD"
+
+# Stochastic Oscillator
+bind["useSO"] = False
+bind["minSO"] = 20
+bind["maxSO"] = 80
+
+# Firm(s) Signals
+bind["useFirmSignals"] = False
+#endregion #Not integrated ye
+
+#region -----CONFIGURABLE INDICATOR BUYING WINDOWS----- NOT INTEGRATED YET
+bwin = {}
+
+bwin["RSI_WINDOW"] = 14
+bwin["SMA_SHORT"] = 20
+bwin["SMA_LONG"] = 50
+bwin["ADX_WINDOW"] = 14
+bwin["MOMENTUM_WINDOW"] = 10
+bwin["VOLATILITY_WINDOW"] = 20
+bwin["EMA_WINDOW"] = 20
+bwin["STOCH_WINDOW"] = 14
+bwin["STOCH_SMOOTH"] = 3
+#endregion
+
+#region-----Configurable Indicator Selling Windows
+swin = {}
+
+swin["RSI"] = 14
+swin["sma_20"] = 20
+swin ["sma_50"] = 50
+swin["ADX"] = 14
+swin["momentum"] = 10
+#endregion
+
+#region--------Selling Indicators-------- NOT INTEGRATED YET
+sind = {}
+
+sind["setStopLoss"] = -0.07
+sind["setTakeProfit"] = 0.13
+
+# ---> RSI
+sind["useRSISell"] = True
+sind["maxRSISell"] = 70
+
+# ---> SMA
+sind["useSMASell"] = True
+
+# ---> Momentum
+sind["useMomentumSell"] = True
+sind["minMomentumSell"] = 30
+
+# ---> ADX
+sind["useADXSell"] = True
+sind["minADXSell"] = 20
 run = True
+
+#endregion
 #endregion
 
 def score_stock(df, ticker_symbol):
@@ -121,50 +157,62 @@ def score_stock(df, ticker_symbol):
         # Ensure Close column is 1D
         close = df["Close"].squeeze()
 
-        # RSI (Relative strength index)
-        rsi = ta.momentum.RSIIndicator(close, window=B_RSI_WINDOW).rsi().iloc[-1]
+        rsi = ta.momentum.RSIIndicator(
+            close,
+            window=bwin["RSI_WINDOW"]
+        ).rsi().iloc[-1]
 
         # SMA 20 and SMA 50
-        sma_20 = close.rolling(window=B_SMA_SHORT).mean().iloc[-1]
-        sma_50 = close.rolling(window=B_SMA_LONG).mean().iloc[-1]
+        sma_20 = close.rolling(window=bwin["SMA_SHORT"]).mean().iloc[-1]
+        sma_50 = close.rolling(window=bwin["SMA_LONG"]).mean().iloc[-1]
 
-        # ADX (Average directional Index
-        adx = ta.trend.ADXIndicator(df["High"].squeeze(), df["Low"].squeeze(), close, window=B_ADX_WINDOW).adx().iloc[-1]
+        # ADX (Average Directional Index)
+        adx = ta.trend.ADXIndicator(
+            df["High"].squeeze(),
+            df["Low"].squeeze(),
+            close,
+            window=bwin["ADX_WINDOW"]
+        ).adx().iloc[-1]
 
-        # Momentum (using Rate of Change as a substitute for MomentumOscillator) Uses derivative of current movement compared to derivative 10 days ago
-        momentum = ta.momentum.ROCIndicator(close, window=B_MOMENTUM_WINDOW).roc().iloc[-1]
+        # Momentum (Rate of Change)
+        momentum = ta.momentum.ROCIndicator(
+            close,
+            window=bwin["MOMENTUM_WINDOW"]
+        ).roc().iloc[-1]
 
-        # 3-month average growth
-        growth_3mo = (close.iloc[-1] - close.iloc[-63]) / close.iloc[-63]  # ~63 trading days = 3 months
+        # 3-Month Average Growth (~63 trading days)
+        growth_3mo = (close.iloc[-1] - close.iloc[-63]) / close.iloc[-63]
 
-        # 3-month average growth
-        growth_6mo = (close.iloc[-1] - close.iloc[-126]) / close.iloc[-126]  # ~126 trading days = 6 months
+        # 6-Month Average Growth (~126 trading days)
+        growth_6mo = (close.iloc[-1] - close.iloc[-126]) / close.iloc[-126]
 
-        #1- Year average growth
-        growth_1yr = (close.iloc[-1] - close.iloc[-240]) / close.iloc[-240]  # ~240 trading days = 12 months
+        # 1-Year Average Growth (~240 trading days)
+        growth_1yr = (close.iloc[-1] - close.iloc[-240]) / close.iloc[-240]
 
-
-        #VOLATILITY (For now this is based on the standard deviation of returns over last 20 days)
+        # Volatility (standard deviation of daily returns)
         daily_returns = close.pct_change()
-        volatility = daily_returns.rolling(window=B_VOLATILITY_WINDOW).std().iloc[-1]
+        volatility = daily_returns.rolling(window=bwin["VOLATILITY_WINDOW"]).std().iloc[-1]
 
-        #EMA (Exponential moving average for 20 days)
-        ema_20 = ta.trend.EMAIndicator(close, window=B_EMA_WINDOW).ema_indicator().iloc[-1]
+        # EMA (Exponential Moving Average)
+        ema_20 = ta.trend.EMAIndicator(
+            close,
+            window=bwin["EMA_WINDOW"]
+        ).ema_indicator().iloc[-1]
 
-        #MACD (difference between 12 EMA and 26 EMA) (What to look for:  MACD crosses above the signal line → bullish momentum (stock gaining strength). MACD crosses below the signal line → bearish momentum (stock losing steam). The distance between the lines indicates the strength of the move.)
+        # MACD (12 EMA vs 26 EMA)
         macd_line = ta.trend.MACD(close).macd()
         signal_line = ta.trend.MACD(close).macd_signal()
 
         macd_today = macd_line.iloc[-1]
         signal_today = signal_line.iloc[-1]
 
-        #Stochastic Oscillator (%K)
+        # Stochastic Oscillator (%K)
         stoch = ta.momentum.StochasticOscillator(
             high=df["High"].squeeze(),
             low=df["Low"].squeeze(),
             close=close,
-            window=B_STOCH_WINDOW,
-            smooth_window=B_STOCH_SMOOTH
+            window=bwin["STOCH_WINDOW"],
+            smooth_window=bwin["STOCH_SMOOTH"]
         ).stoch().iloc[-1]
     except (IndexError, KeyError, ValueError) as e:
         # If any indicator failed due to insufficient data / missing columns, skip this ticker
@@ -180,82 +228,84 @@ def score_stock(df, ticker_symbol):
     score = 0
 
     # RSI scoring
-    if useRSI == True:
-        if minRSI <= rsi <= maxRSI:
+    if bind["useRSI"] == True:
+        if bind["minRSI"] <= rsi <= bind["maxRSI"]:
             score += 1
 
     # SMA scoring
-    if useSMA20_50 == True:
+    if bind["useSMA20_50"] == True:
         if sma_20 > sma_50:
             score += 1
         else:
             score -= 1
 
     # ADX scoring (trend strength)
-    if useADX == True:
-        if adx > setADX:
+    if bind["useADX"] == True:
+        if adx > bind["setADX"]:
             score += 1
 
     # Momentum scoring
-    if useMomentum == True:
-        if momentum > minMomentum:
+    if bind["useMomentum"] == True:
+        if momentum > bind["minMomentum"]:
             score += 1
         else:
             score -= 1
 
     # 3-month growth scoring
-    if use3MG == True:
-        if growth_3mo > setHigh3Month_Growth:
+    if bind["use3MG"] == True:
+        if growth_3mo > bind["setHigh3Month_Growth"]:
             score += 3
-        elif growth_3mo > setMed3Month_Growth:
+        elif growth_3mo > bind["setMed3Month_Growth"]:
             score += 2
-        elif growth_3mo > setMin3Month_Growth:
+        elif growth_3mo > bind["setMin3Month_Growth"]:
             score += 1
         else:
             score -= 1
 
     # 6-month growth scoring
-    if use6MG == True:
-        if growth_6mo > setHigh6MG:
+    if bind["use6MG"] == True:
+        if growth_6mo > bind["setHigh6MG"]:
             score += 3
-        elif growth_6mo > setMed6MG:
+        elif growth_6mo > bind["setMed6MG"]:
             score += 2
-        elif growth_6mo > setMin6MG:
+        elif growth_6mo > bind["setMin6MG"]:
             score += 1
         else:
             score -= 1
-
 
     # 1-year growth scoring
-    if use1YG == True:
-        if growth_1yr > setHigh1yr:
+    if bind["use1YG"] == True:
+        if growth_1yr > bind["setHigh1yr"]:
             score += 3
-        elif growth_1yr > setMed1yr:
+        elif growth_1yr > bind["setMed1yr"]:
             score += 2
-        elif growth_1yr > setMin1yr:
+        elif growth_1yr > bind["setMin1yr"]:
             score += 1
         else:
             score -= 1
-    # Volatility Scoring
-    if useVol == True:
-        if minVol< volatility < maxVol:
+
+    # Volatility scoring
+    if bind["useVol"] == True:
+        if bind["minVol"] < volatility < bind["maxVol"]:
             score += 1
-    #EMA Scoring
-    if useEMA == True:
-        if (ema_20/current_price) > minEMA:
+
+    # EMA scoring
+    if bind["useEMA"] == True:
+        if (ema_20 / current_price) > bind["minEMA"]:
             score += 1
-    #MacD Scoring
-    if useMACD == True:
+
+    # MACD scoring
+    if bind["useMACD"] == True:
         if macd_today > signal_today:  # MACD above signal → bullish
             score += 1
         elif macd_today < signal_today:  # MACD below signal → bearish
             score -= 1
 
-    #Stochastic oscillator scoring
-    if useSO == True:
-        if stoch < minSO:
+    # Stochastic oscillator scoring
+    if bind["useSO"] == True:
+        if stoch < bind["minSO"]:
             score += 1  # oversold → potential bullish
-        elif stoch > maxSO:
+        elif stoch > bind["maxSO"]:
             score -= 1  # overbought → potential bearish
 
 
@@ -264,20 +314,21 @@ def score_stock(df, ticker_symbol):
 
 
 
+
 def fruit_picker(df, ticker_symbol, buy_price):
     close = df["Close"].squeeze()
 
     # Indicators
-    rsi = ta.momentum.RSIIndicator(close, window=14).rsi().iloc[-1]
-    sma_20 = close.rolling(window=20).mean().iloc[-1]
-    sma_50 = close.rolling(window=50).mean().iloc[-1]
-    adx = ta.trend.ADXIndicator(df["High"].squeeze(), df["Low"].squeeze(), close, window=14).adx().iloc[-1]
-    momentum = ta.momentum.ROCIndicator(close, window=10).roc().iloc[-1]
+    rsi = ta.momentum.RSIIndicator(close, window=swin[RSI]).rsi().iloc[-1]
+    sma_20 = close.rolling(window=swin[sma_20]).mean().iloc[-1]
+    sma_50 = close.rolling(window=swin [sma_50]).mean().iloc[-1]
+    adx = ta.trend.ADXIndicator(df["High"].squeeze(), df["Low"].squeeze(), close, window=swin[ADX]).adx().iloc[-1]
+    momentum = ta.momentum.ROCIndicator(close, window=swin[momentum]).roc().iloc[-1]
     current_price = close.iloc[-1]
 
     #  Exit thresholds
-    stop_loss = setStopLoss   # -7% by default
-    take_profit = setTakeProfit  # +13% by default
+    stop_loss = sind["setStopLoss"]   # -7% by default
+    take_profit = sind["setTakeProfit"]  # +13% by default
 
     #  Price-based exits
     pct_change = (current_price - buy_price) / buy_price
@@ -292,19 +343,22 @@ def fruit_picker(df, ticker_symbol, buy_price):
     signals = 0
     reasons = []
 
-    if rsi > maxRSISell:
+    if rsi > sind["maxRSISell"]:
         signals += 1
         reasons.append("RSI overbought")
-    if useSMASell:
+
+    if sind["useSMASell"]:
         if sma_20 < sma_50:
             signals += 1
             reasons.append("SMA 20 crossed below SMA 50")
-    if useMomentumeSell:
-        if momentum < 0:
+
+    if sind["useMomentumSell"]:
+        if momentum < sind["minMomentumSell"]:
             signals += 1
             reasons.append("Momentum turned negative")
-    if useADXSell:
-        if adx < 20:
+
+    if sind["useADXSell"]:
+        if adx < sind["minADXSell"]:
             signals += 1
             reasons.append("Weak trend")
 
@@ -522,7 +576,8 @@ def buying_and_selling():
 main_title = figlet_format("HAVEN PROJECT", font="slant")
 console.print(main_title, style="bright_green")
 
-while True:
+while True:#MENU
+    #region Main Menu
     # print("Hi, Welcome To the TradingBot Version 25.10.19"
     #       "\n\nWhat would you like to do today?\n"
     #       "\n1) Run Trading Bot Algorithm"
@@ -548,6 +603,7 @@ while True:
 
     panel = Panel(menu_text, title="[bold yellow]TradingBot Version 25.10.19[/bold yellow]", expand=False)
     console.print(panel)
+    #endregion
 
 
     userInput = input("\nPlease Enter Your Choice: ")
@@ -692,118 +748,121 @@ while True:
                   "          Press 1 To Exit\n")
             while True:
 
-                useRSI = input("Use RSI? (y/n): ").lower()
-                if useRSI == "1":
-                    useRSI = False
-                    break
-                useRSI = (useRSI == "y")
-                if useRSI:
-                    minRSI = float(input(f"Minimum RSI (current {minRSI}): "))
-                    maxRSI = float(input(f"Maximum RSI (current {maxRSI}): "))
-
-                useSMA20_50 = input("Use SMA 20/50 crossover? (y/n): ").lower() == "y"
-
-                useADX = input("Use ADX? (y/n): ").lower()
-                if useADX == "1":
-                    useADX = False
-                    break
-                useADX = (useADX == "y")
-                if useADX:
-                    setADX = float(input(f"ADX threshold (current {setADX}): "))
-
-                useMomentum = input("Use Momentum? (y/n): ").lower()
-                if useMomentum == "1":
-                    useMomentum = False
-                    break
-                useMomentum = (useMomentum == "y")
-                if useMomentum:
-                    minMomentum = float(input(f"Minimum momentum (current {minMomentum}): "))
-
-                use3MG = input("Use 3-month growth? (y/n): ").lower()
-                if use3MG == "1":
-                    use3MG = False
-                    break
-                use3MG = (use3MG == "y")
-                if use3MG:
-                    setMin3Month_Growth = float(input(f"Minimum 3-month growth (current {setMin3Month_Growth}): "))
-                    setMed3Month_Growth = float(input(f"Medium 3-month growth (current {setMed3Month_Growth}): "))
-                    setHigh3Month_Growth = float(input(f"High 3-month growth (current {setHigh3Month_Growth}): "))
-
-                use6MG = input("Use 6-month growth? (y/n): ").lower()
-                if use6MG == "1":
-                    use6MG = False
-                    break
-                use6MG = (use6MG == "y")
-                if use6MG:
-                    setMin6MG = float(input(f"Minimum 6-month growth (current {setMin6MG}): "))
-                    setMed6MG = float(input(f"Medium 6-month growth (current {setMed6MG}): "))
-                    setHigh6MG = float(input(f"High 6-month growth (current {setHigh6MG}): "))
-
-                use1YG = input("Use 1-Year growth? (y/n): ").lower()
-                if use1YG == "1":
-                    use1YG = False
-                    break
-                use1YG = (use1YG == "y")
-                if use1YG:
-                    setMin1yr = float(input(f"Minimum 1-Year Growth (current {setMin1yr}): "))
-                    setMed1yr = float(input(f"Medium 1-Year Growth (current {setMed1yr}): "))
-                    setHigh1yr = float(input(f"High 1-Year Growth (current {setHigh1yr}): "))
-
-                useVol = input("Factor In Volatility? (y/n): ").lower()
-                if useVol == "1":
-                    useVol = False
-                    break
-                useVol = (useVol == "y")
-
-                if useVol:
-                    minVol = float(input(f"Minimum Volatility (current {minVol}): "))
-                    maxVol = float(input(f"Maximum Volatility (current {maxVol}): "))
-
-                useEMA = input("Use EMA? (y/n): ").lower()
-                if useEMA == "1":
-                    useEMA = False
-                    break
-                useEMA = (useEMA == "y")
-                if useEMA:
-                    minEMA = float(input(f"Minimum EMA (current {minEMA}): "))
-
-                useMACD = input("Use MACD? (y/n): ").lower()
-                if useMACD == "1":
-                    useMACD = False
-                    break
-                useMACD = (useMACD == "y")
+                if userInput == "1":
+                    print("\n--- Adjust Buying Indicator Parameters ---\n"
+                          "          Press 1 To Exit\n")
 
 
-                useSO = input("Use Stochastic Oscillator (y/n): ").lower()
-                if useSO == "1":
-                    useSO = False
-                    break
-                useSO = (useSO == "y")
-                if useSO:
-                    minSO = float(input(f"Minimum Stochastic Value (0-100) (current {minSO}): "))
-                    maxSO = float(input(f"Maximum Stochastic Value (0-100) (current {maxSO}): "))
+
+                    bind["useRSI"] = input("Use RSI? (y/n): ").lower()
+                    if bind["useRSI"] == "1":
+                        bind["useRSI"] = False
+                        break
+                    bind["useRSI"] = (bind["useRSI"] == "y")
+                    if bind["useRSI"]:
+                        bind["minRSI"] = float(input(f"Minimum RSI (current {bind['minRSI']}): "))
+                        bind["maxRSI"] = float(input(f"Maximum RSI (current {bind['maxRSI']}): "))
+
+                    bind["useSMA20_50"] = input("Use SMA 20/50 crossover? (y/n): ").lower() == "y"
+
+                    bind["useADX"] = input("Use ADX? (y/n): ").lower()
+                    if bind["useADX"] == "1":
+                        bind["useADX"] = False
+                        break
+                    bind["useADX"] = (bind["useADX"] == "y")
+                    if bind["useADX"]:
+                        bind["setADX"] = float(input(f"ADX threshold (current {bind['setADX']}): "))
+
+                    bind["useMomentum"] = input("Use Momentum? (y/n): ").lower()
+                    if bind["useMomentum"] == "1":
+                        bind["useMomentum"] = False
+                        break
+                    bind["useMomentum"] = (bind["useMomentum"] == "y")
+                    if bind["useMomentum"]:
+                        bind["minMomentum"] = float(input(f"Minimum momentum (current {bind['minMomentum']}): "))
+
+                    bind["use3MG"] = input("Use 3-month growth? (y/n): ").lower()
+                    if bind["use3MG"] == "1":
+                        bind["use3MG"] = False
+                        break
+                    bind["use3MG"] = (bind["use3MG"] == "y")
+                    if bind["use3MG"]:
+                        bind["setMin3Month_Growth"] = float(
+                            input(f"Minimum 3-month growth (current {bind['setMin3Month_Growth']}): "))
+                        bind["setMed3Month_Growth"] = float(
+                            input(f"Medium 3-month growth (current {bind['setMed3Month_Growth']}): "))
+                        bind["setHigh3Month_Growth"] = float(
+                            input(f"High 3-month growth (current {bind['setHigh3Month_Growth']}): "))
+
+                    bind["use6MG"] = input("Use 6-month growth? (y/n): ").lower()
+                    if bind["use6MG"] == "1":
+                        bind["use6MG"] = False
+                        break
+                    bind["use6MG"] = (bind["use6MG"] == "y")
+                    if bind["use6MG"]:
+                        bind["setMin6MG"] = float(input(f"Minimum 6-month growth (current {bind['setMin6MG']}): "))
+                        bind["setMed6MG"] = float(input(f"Medium 6-month growth (current {bind['setMed6MG']}): "))
+                        bind["setHigh6MG"] = float(input(f"High 6-month growth (current {bind['setHigh6MG']}): "))
+
+                    bind["use1YG"] = input("Use 1-Year growth? (y/n): ").lower()
+                    if bind["use1YG"] == "1":
+                        bind["use1YG"] = False
+                        break
+                    bind["use1YG"] = (bind["use1YG"] == "y")
+                    if bind["use1YG"]:
+                        bind["setMin1yr"] = float(input(f"Minimum 1-Year Growth (current {bind['setMin1yr']}): "))
+                        bind["setMed1yr"] = float(input(f"Medium 1-Year Growth (current {bind['setMed1yr']}): "))
+                        bind["setHigh1yr"] = float(input(f"High 1-Year Growth (current {bind['setHigh1yr']}): "))
+
+                    bind["useVol"] = input("Factor In Volatility? (y/n): ").lower()
+                    if bind["useVol"] == "1":
+                        bind["useVol"] = False
+                        break
+                    bind["useVol"] = (bind["useVol"] == "y")
+
+                    if bind["useVol"]:
+                        bind["minVol"] = float(input(f"Minimum Volatility (current {bind['minVol']}): "))
+                        bind["maxVol"] = float(input(f"Maximum Volatility (current {bind['maxVol']}): "))
+
+                    bind["useEMA"] = input("Use EMA? (y/n): ").lower()
+                    if bind["useEMA"] == "1":
+                        bind["useEMA"] = False
+                        break
+                    bind["useEMA"] = (bind["useEMA"] == "y")
+                    if bind["useEMA"]:
+                        bind["minEMA"] = float(input(f"Minimum EMA (current {bind['minEMA']}): "))
+
+                    bind["useMACD"] = input("Use MACD? (y/n): ").lower()
+                    if bind["useMACD"] == "1":
+                        bind["useMACD"] = False
+                        break
+                    bind["useMACD"] = (bind["useMACD"] == "y")
+
+                    bind["useSO"] = input("Use Stochastic Oscillator (y/n): ").lower()
+                    if bind["useSO"] == "1":
+                        bind["useSO"] = False
+                        break
+                    bind["useSO"] = (bind["useSO"] == "y")
+                    if bind["useSO"]:
+                        bind["minSO"] = float(
+                            input(f"Minimum Stochastic Value (0-100) (current {bind['minSO']}): "))
+                        bind["maxSO"] = float(
+                            input(f"Maximum Stochastic Value (0-100) (current {bind['maxSO']}): "))
+
+                    print("\n✅ Parameters updated!\n")
+                    print("Enter 1 To Return To The Main Menu")
+                    userInput = input("Selection: ")
 
 
-                print("\n✅ Parameters updated!\n")
-                print("Enter 1 To Return To The Main Menu")
-                userInput = input("Selection: ")
-
-                while userInput != "1":
-                    userInput = input("Please Enter Your Choice: ")
+                    while userInput != "1":
+                        userInput = input("Please Enter Your Choice: ")
+                    if userInput == "1":
+                        break
 
         if userInput == "2":
             print("\n-----Adjust Indicator Windows-----"
                   "\n        (Press 1 to exit)")
-            # B_RSI_WINDOW = 14
-            # B_SMA_SHORT = 20
-            # B_SMA_LONG = 50
-            # B_ADX_WINDOW = 14
-            # B_MOMENTUM_WINDOW = 10
-            # B_VOLATILITY_WINDOW = 20
-            # B_EMA_WINDOW = 20
-            # B_STOCH_WINDOW = 14
-            # B_STOCH_SMOOTH = 3
-                #RSI WINDOW
+
             while True:
                 AdjustRSI = input("Adjust RSI Window (y/n): ").lower()
                 if AdjustRSI == "1":
@@ -811,16 +870,16 @@ while True:
                     break
                 AdjustRSI = (AdjustRSI == "y")
                 if AdjustRSI:
-                    B_RSI_WINDOW = float(input(f"RSI Window (current {B_RSI_WINDOW}): "))
+                    bwin["RSI_WINDOW"] = float(input(f"RSI Window (current {bwin['RSI_WINDOW']}): "))
 
-                    # SMA Short Window
+                # SMA Short Window
                 AdjustSMAShort = input("Adjust SMA Short Window (y/n): ").lower()
                 if AdjustSMAShort == "1":
                     AdjustSMAShort = False
                     break
                 AdjustSMAShort = (AdjustSMAShort == "y")
                 if AdjustSMAShort:
-                    B_SMA_SHORT = float(input(f"SMA Short Window (current {B_SMA_SHORT}): "))
+                    bwin["SMA_SHORT"] = float(input(f"SMA Short Window (current {bwin['SMA_SHORT']}): "))
 
                 # SMA Long Window
                 AdjustSMALong = input("Adjust SMA Long Window (y/n): ").lower()
@@ -829,7 +888,7 @@ while True:
                     break
                 AdjustSMALong = (AdjustSMALong == "y")
                 if AdjustSMALong:
-                    B_SMA_LONG = float(input(f"SMA Long Window (current {B_SMA_LONG}): "))
+                    bwin["SMA_LONG"] = float(input(f"SMA Long Window (current {bwin['SMA_LONG']}): "))
 
                 # ADX Window
                 AdjustADX = input("Adjust ADX Window (y/n): ").lower()
@@ -838,7 +897,7 @@ while True:
                     break
                 AdjustADX = (AdjustADX == "y")
                 if AdjustADX:
-                    B_ADX_WINDOW = float(input(f"ADX Window (current {B_ADX_WINDOW}): "))
+                    bwin["ADX_WINDOW"] = float(input(f"ADX Window (current {bwin['ADX_WINDOW']}): "))
 
                 # Momentum Window
                 AdjustMomentum = input("Adjust Momentum Window (y/n): ").lower()
@@ -847,7 +906,7 @@ while True:
                     break
                 AdjustMomentum = (AdjustMomentum == "y")
                 if AdjustMomentum:
-                    B_MOMENTUM_WINDOW = float(input(f"Momentum Window (current {B_MOMENTUM_WINDOW}): "))
+                    bwin["MOMENTUM_WINDOW"] = float(input(f"Momentum Window (current {bwin['MOMENTUM_WINDOW']}): "))
 
                 # Volatility Window
                 AdjustVolatility = input("Adjust Volatility Window (y/n): ").lower()
@@ -856,7 +915,8 @@ while True:
                     break
                 AdjustVolatility = (AdjustVolatility == "y")
                 if AdjustVolatility:
-                    B_VOLATILITY_WINDOW = float(input(f"Volatility Window (current {B_VOLATILITY_WINDOW}): "))
+                    bwin["VOLATILITY_WINDOW"] = float(
+                        input(f"Volatility Window (current {bwin['VOLATILITY_WINDOW']}): "))
 
                 # EMA Window
                 AdjustEMA = input("Adjust EMA Window (y/n): ").lower()
@@ -865,7 +925,7 @@ while True:
                     break
                 AdjustEMA = (AdjustEMA == "y")
                 if AdjustEMA:
-                    B_EMA_WINDOW = float(input(f"EMA Window (current {B_EMA_WINDOW}): "))
+                    bwin["EMA_WINDOW"] = float(input(f"EMA Window (current {bwin['EMA_WINDOW']}): "))
 
                 # Stochastic Oscillator Window
                 AdjustStoch = input("Adjust Stochastic Oscillator Window (y/n): ").lower()
@@ -874,7 +934,7 @@ while True:
                     break
                 AdjustStoch = (AdjustStoch == "y")
                 if AdjustStoch:
-                    B_STOCH_WINDOW = float(input(f"Stochastic Window (current {B_STOCH_WINDOW}): "))
+                    bwin["STOCH_WINDOW"] = float(input(f"Stochastic Window (current {bwin['STOCH_WINDOW']}): "))
 
                 # Stochastic Smooth Window
                 AdjustStochSmooth = input("Adjust Stochastic Smooth Window (y/n): ").lower()
@@ -883,36 +943,95 @@ while True:
                     break
                 AdjustStochSmooth = (AdjustStochSmooth == "y")
                 if AdjustStochSmooth:
-                    B_STOCH_SMOOTH = float(input(f"Stochastic Smooth (current {B_STOCH_SMOOTH}): "))
+                    bwin["STOCH_SMOOTH"] = float(input(f"Stochastic Smooth (current {bwin['STOCH_SMOOTH']}): "))
     if userInput == "8":
-        setStopLoss = -0.07
-        setTakeProfit = 0.13
-        useRSISell = True
-        maxRSISell = 70
-        useSMASell = True
-        useMomentumeSell = True
-        minMomentumSell = 30
-        useADXSell = True
-        minADXSell = 20
+        userInput = input("\n1) Adjust Current Stock Indicators In Use"
+                          "\n2) Adjust Windows Of Current Indicators"
+                          "\n\nPlease Enter Your Choice:")
 
-        print("\n--- Adjust Scoring Parameters ---\n")
 
-        setStopLoss = float(input(f"Set Stop Loss (current {setStopLoss}): "))
-        setTakeProfit = float(input(f"Set Take Profit (current {setStopLoss}): "))
+        if userInput == "1":
+            print("\n--- Adjust Scoring Parameters ---\n"
+                  "          Press 1 To Exit\n")
 
-        useRSISell = input("Use RSI as a Selling Indicator? (y/n): ").lower() == "y"
-        if useRSISell:
-            maxRSISell = float(input(f"Maximum RSI (current {maxRSISell}): "))
+            while True:
+                defaultStop = sind["setStopLoss"]
+                sind["setStopLoss"] = float(input(f"Set Stop Loss (current {sind['setStopLoss']}): "))
+                if sind["setStopLoss"] == 1:
+                    sind["setStopLoss"] = defaultStop
+                    break
 
-        useSMASell = input("Use SMA as a Selling Indicator? (y/n): ").lower() == "y"
+                defaultTakeProfit = sind["setTakeProfit"]
+                sind["setTakeProfit"] = float(input(f"Set Take Profit (current {sind['setTakeProfit']}): "))
+                if sind["setTakeProfit"] == 1:
+                    sind["setTakeProfit"] = defaultTakeProfit
+                    break
 
-        useMomentumeSell = input("Use Momentum as a Selling Indicator? (y/n): ").lower() == "y"
-        if useMomentumeSell:
-            minMomentumSell = float(input(f"Minimum Momentum (current {minMomentumSell}): "))
+                sind["useRSISell"] = input("Use RSI as a Selling Indicator? (y/n): ").lower()
+                if sind["useRSISell"] == "1":
+                    sind["useRSISell"] = False
+                    break
+                sind["useRSISell"] = (sind["useRSISell"] == "y")
+                if sind["useRSISell"]:
+                    sind["maxRSISell"] = float(input(f"Maximum RSI (current {sind['maxRSISell']}): "))
 
-        useADXSell = input("Use ADX as a Selling Indicator? (y/n): ").lower() == "y"
-        if useADXSell:
-            minADXSell = float(input(f"Minimum ADX (current {minADXSell}): "))
+                sind["useSMASell"] = input("Use SMA as a Selling Indicator? (y/n): ").lower() == "y"
+
+                sind["useMomentumeSell"] = input("Use Momentum as a Selling Indicator? (y/n): ").lower() == "y"
+                if sind["useMomentumeSell"]:
+                    sind["minMomentumSell"] = float(input(f"Minimum Momentum (current {sind['minMomentumSell']}): "))
+
+                sind["useADXSell"] = input("Use ADX as a Selling Indicator? (y/n): ").lower() == "y"
+                if sind["useADXSell"]:
+                    sind["minADXSell"] = float(input(f"Minimum ADX (current {sind['minADXSell']}): "))
+        if userInput == "2":
+            print("\n-----Adjust Indicator Windows-----"
+                  "\n        (Press 1 to exit)")
+
+            while True:
+                AdjustRSI = input("Adjust RSI Window (y/n): ").lower()
+                if AdjustRSI == "1":
+                    AdjustRSI = False
+                    break
+                AdjustRSI = (AdjustRSI == "y")
+                if AdjustRSI:
+                    swin["RSI"] = float(input(f"RSI Window (current {swin['RSI']}): "))
+
+                # SMA 20
+                AdjustSMAShort = input("Adjust SMA 20 Window (y/n): ").lower()
+                if AdjustSMAShort == "1":
+                    AdjustSMAShort = False
+                    break
+                AdjustSMAShort = (AdjustSMAShort == "y")
+                if AdjustSMAShort:
+                    swin["sma_20"] = float(input(f"SMA 20 Window (current {swin['sma_20']}): "))
+
+                # SMA 50
+                AdjustSMALong = input("Adjust SMA 50 Window (y/n): ").lower()
+                if AdjustSMALong == "1":
+                    AdjustSMALong = False
+                    break
+                AdjustSMALong = (AdjustSMALong == "y")
+                if AdjustSMALong:
+                    swin["sma_50"] = float(input(f"SMA 50 Window (current {swin['sma_50']}): "))
+
+                # ADX
+                AdjustADX = input("Adjust ADX Window (y/n): ").lower()
+                if AdjustADX == "1":
+                    AdjustADX = False
+                    break
+                AdjustADX = (AdjustADX == "y")
+                if AdjustADX:
+                    swin["ADX"] = float(input(f"ADX Window (current {swin['ADX']}): "))
+
+                # Momentum
+                AdjustMomentum = input("Adjust Momentum Window (y/n): ").lower()
+                if AdjustMomentum == "1":
+                    AdjustMomentum = False
+                    break
+                AdjustMomentum = (AdjustMomentum == "y")
+                if AdjustMomentum:
+                    swin["momentum"] = float(input(f"Momentum Window (current {swin['momentum']}"))
     if userInput == "9":
         chosenStock = input("What Stock Would You Like To Analyze? ").upper()
         try:
