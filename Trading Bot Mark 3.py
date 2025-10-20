@@ -1,6 +1,6 @@
 # Step 0 ~ Libraries
+#region import
 from sys import maxsize
-
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -15,17 +15,16 @@ from rich.console import Console
 from pyfiglet import figlet_format
 from rich.text import Text
 from rich.panel import Panel
-
-console = Console(force_terminal=True)
 import time
 from datetime import datetime
 import sys, select
-#Hellooooo
 
+
+console = Console(force_terminal=True)
 trading_client = TradingClient("PK58DWB3ETACZRPLDKWY","3efM2Riaz99eaM4uqIybfcsoETRa2dorppZbEJkY", paper=True)
+#endregion
 
-
-
+#region Adjustable variables
 #Buying Indicators (INC) means fully written in and operational
 #---> RSI (INC)
 useRSI = True
@@ -88,13 +87,6 @@ B_VOLATILITY_WINDOW = 20
 B_EMA_WINDOW = 20
 B_STOCH_WINDOW = 14
 B_STOCH_SMOOTH = 3
-
-
-
-
-
-
-
 #------------------------------------------->
 #Selling Indicators
 setStopLoss = -0.07
@@ -108,6 +100,7 @@ useADXSell = True
 minADXSell = 20
 
 run = True
+#endregion
 
 def score_stock(df, ticker_symbol):
 
@@ -267,25 +260,9 @@ def score_stock(df, ticker_symbol):
 
 
     return score
+#This is the start of the exit strategy or the Exit function
 
 
-
-
-
-
-
-
-
-
-
-
-#This is the start of the exit strategy
-
-
-
-
-
-#Exit function
 
 def fruit_picker(df, ticker_symbol, buy_price):
     close = df["Close"].squeeze()
@@ -340,30 +317,14 @@ def fruit_picker(df, ticker_symbol, buy_price):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#region stocks list
 #Stock Lists ----------------Here you enter the stocks you want to analyze (1)
 top_10 = []
-
 stock_list_pre = [ #S&P 500 Stocks
     "AAPL","MSFT","AMZN","NVDA","GOOGL","GOOG","META","BRK.B","TSLA","UNH",
     "LLY","XOM","JNJ","JPM","V","PG","AVGO","HD","MA","CVX","MRK","ABBV",
     "PEP","COST","KO","BAC","PFE","ADBE"]
+#endregion
 
 def buying_and_selling():
     print("\n🔄 Trading algorithm started!\n")
@@ -556,25 +517,7 @@ def buying_and_selling():
         print("starting cycle")
 
 
-
-
-
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -#
-#Note: This is where the actual program code starts, nothing to do with the trading algorithm, that is all above.
-
+#region Main Menu
 #Main Title
 main_title = figlet_format("HAVEN PROJECT", font="slant")
 console.print(main_title, style="bright_green")
@@ -631,10 +574,6 @@ while True:
         userInput = input("Selection: ")
         while userInput != "1":
             userInput = input("Please Enter Your Choice: ")
-
-
-
-
     if userInput == "3":
         print("\nPortfolio Summary:")
         positions = trading_client.get_all_positions()
@@ -680,13 +619,6 @@ while True:
         userInput = input("Selection: ")
         while userInput != "1":
             userInput = input("Please Enter Your Choice: ")
-
-
-
-
-
-
-
     if userInput == "4":
 
         print("\n\nARE YOU SURE YOU WOULD LIKE TO EXIT ALL OF YOUR CURRENT POSITIONS?\n")
@@ -721,14 +653,7 @@ while True:
                         print(f"❌ Failed to sell {p.symbol}: {e}")
             else:
                 print("📭 No stocks to check right now.")
-
-
-
     #if userInput == "5":
-
-
-
-
     if userInput == "6":
         selectedStocks = input("Enter the stocks you wish to score (separated by spaces): ")
         stock_list_input = selectedStocks.upper().split()
@@ -754,9 +679,7 @@ while True:
         userInput = input("Selection: ")
         while userInput != "1":
             userInput = input("Please Enter Your Choice: ")
-
     if userInput == "7":
-
 
         userInput = input("\n1) Adjust Current Stock Indicators In Use"
                           "\n2) Adjust Windows Of Current Indicators"
@@ -961,11 +884,6 @@ while True:
                 AdjustStochSmooth = (AdjustStochSmooth == "y")
                 if AdjustStochSmooth:
                     B_STOCH_SMOOTH = float(input(f"Stochastic Smooth (current {B_STOCH_SMOOTH}): "))
-
-
-
-
-
     if userInput == "8":
         setStopLoss = -0.07
         setTakeProfit = 0.13
@@ -995,96 +913,89 @@ while True:
         useADXSell = input("Use ADX as a Selling Indicator? (y/n): ").lower() == "y"
         if useADXSell:
             minADXSell = float(input(f"Minimum ADX (current {minADXSell}): "))
-
-
-
-
-
-
     if userInput == "9":
         chosenStock = input("What Stock Would You Like To Analyze? ").upper()
+        try:
+            # Pull historical data
+            df = yf.download(chosenStock, period="1y", interval="1d")  # 1 year to cover all growth windows
+            close = df["Close"].squeeze()
+            high = df["High"].squeeze()
+            low = df["Low"].squeeze()
 
-    try:
-        # Pull historical data
-        df = yf.download(chosenStock, period="1y", interval="1d")  # 1 year to cover all growth windows
-        close = df["Close"].squeeze()
-        high = df["High"].squeeze()
-        low = df["Low"].squeeze()
+            # === Indicators ===
+            rsi = ta.momentum.RSIIndicator(close, window=14).rsi().iloc[-1]
+            sma_20 = close.rolling(20).mean().iloc[-1]
+            sma_50 = close.rolling(50).mean().iloc[-1]
+            ema_20 = ta.trend.EMAIndicator(close, window=20).ema_indicator().iloc[-1]
 
-        # === Indicators ===
-        rsi = ta.momentum.RSIIndicator(close, window=14).rsi().iloc[-1]
-        sma_20 = close.rolling(20).mean().iloc[-1]
-        sma_50 = close.rolling(50).mean().iloc[-1]
-        ema_20 = ta.trend.EMAIndicator(close, window=20).ema_indicator().iloc[-1]
+            macd_line = ta.trend.MACD(close).macd().iloc[-1]
+            signal_line = ta.trend.MACD(close).macd_signal().iloc[-1]
 
-        macd_line = ta.trend.MACD(close).macd().iloc[-1]
-        signal_line = ta.trend.MACD(close).macd_signal().iloc[-1]
+            stoch = ta.momentum.StochasticOscillator(
+                high=high,
+                low=low,
+                close=close,
+                window=14,
+                smooth_window=3
+            ).stoch().iloc[-1]
 
-        stoch = ta.momentum.StochasticOscillator(
-            high=high,
-            low=low,
-            close=close,
-            window=14,
-            smooth_window=3
-        ).stoch().iloc[-1]
+            momentum = ta.momentum.ROCIndicator(close, window=10).roc().iloc[-1]
 
-        momentum = ta.momentum.ROCIndicator(close, window=10).roc().iloc[-1]
+            growth_3mo = (close.iloc[-1] - close.iloc[-63]) / close.iloc[-63]
+            growth_6mo = (close.iloc[-1] - close.iloc[-126]) / close.iloc[-126]
+            growth_1yr = (close.iloc[-1] - close.iloc[-220]) / close.iloc[-220]
 
-        growth_3mo = (close.iloc[-1] - close.iloc[-63]) / close.iloc[-63]
-        growth_6mo = (close.iloc[-1] - close.iloc[-126]) / close.iloc[-126]
-        growth_1yr = (close.iloc[-1] - close.iloc[-220]) / close.iloc[-220]
+            volatility = close.pct_change().rolling(20).std().iloc[-1]
 
-        volatility = close.pct_change().rolling(20).std().iloc[-1]
+            adx = ta.trend.ADXIndicator(high, low, close, window=14).adx().iloc[-1]
 
-        adx = ta.trend.ADXIndicator(high, low, close, window=14).adx().iloc[-1]
+            current_price = close.iloc[-1]
+        except:
+            continue
 
-        current_price = close.iloc[-1]
-    except:
-        continue
+        print(f"Analysis for {chosenStock}...")
+        print(f"Current Price of {chosenStock}: {current_price}")
 
-    print(f"Analysis for {chosenStock}...")
-    print(f"Current Price of {chosenStock}: {current_price}")
+        if rsi is not None:
+            print (f"RSI for {chosenStock}: {rsi}")
+        if sma_20 is not None:
+            print (f"20 Day SMA for {chosenStock}: {sma_20}")
+        if sma_50 is not None:
+            print (f"50 Day SMA for {chosenStock}: {sma_50}")
+        if ema_20 is not None:
+            print (f"20 Day EMA for {chosenStock}: {ema_20}")
+        print(f"\nMACD For {chosenStock}------>")
 
-    if rsi is not None:
-        print (f"RSI for {chosenStock}: {rsi}")
-    if sma_20 is not None:
-        print (f"20 Day SMA for {chosenStock}: {sma_20}")
-    if sma_50 is not None:
-        print (f"50 Day SMA for {chosenStock}: {sma_50}")
-    if ema_20 is not None:
-        print (f"20 Day EMA for {chosenStock}: {ema_20}")
-    print(f"\nMACD For {chosenStock}------>")
-
-    if macd_line is not None:
-        print (f"MACD line for {chosenStock}: {macd_line}")
-    if signal_line is not None:
-        print (f"Signal line for {chosenStock}: {signal_line}")
-
-
-    print("\nOther Indicators")
-    if stoch is not None:
-        print (f"Stochastic Oscillator for {chosenStock}: {stoch}")
-    if momentum is not None:
-        print (f"Momentum for {chosenStock}: {momentum}")
-    if volatility is not None:
-        print (f"Volatility for {chosenStock}: {volatility}")
-    if adx is not None:
-        print (f"ADX for {chosenStock}: {adx}")
+        if macd_line is not None:
+            print (f"MACD line for {chosenStock}: {macd_line}")
+        if signal_line is not None:
+            print (f"Signal line for {chosenStock}: {signal_line}")
 
 
-    print (f"\nMonthly Growth For {chosenStock}")
-    if growth_3mo is not None:
-        print (f"\nGrowth 3mo for {chosenStock}: {growth_3mo}")
-    if growth_6mo is not None:
-        print (f"Growth 6mo for {chosenStock}: {growth_6mo}")
-    if growth_1yr is not None:
-        print(f"Growth 1 Year for {chosenStock}: {growth_1yr}")
+        print("\nOther Indicators")
+        if stoch is not None:
+            print (f"Stochastic Oscillator for {chosenStock}: {stoch}")
+        if momentum is not None:
+            print (f"Momentum for {chosenStock}: {momentum}")
+        if volatility is not None:
+            print (f"Volatility for {chosenStock}: {volatility}")
+        if adx is not None:
+            print (f"ADX for {chosenStock}: {adx}")
 
-    print("Enter 1 To Return To The Main Menu")
-    userInput = input("Selection: ")
-    while userInput != "1":
-        userInput = input("Please Enter Your Choice: ")
 
+        print (f"\nMonthly Growth For {chosenStock}")
+        if growth_3mo is not None:
+            print (f"\nGrowth 3mo for {chosenStock}: {growth_3mo}")
+        if growth_6mo is not None:
+            print (f"Growth 6mo for {chosenStock}: {growth_6mo}")
+        if growth_1yr is not None:
+            print(f"Growth 1 Year for {chosenStock}: {growth_1yr}")
+
+        print("Enter 1 To Return To The Main Menu")
+        userInput = input("Selection: ")
+        while userInput != "1":
+            userInput = input("Please Enter Your Choice: ")
+#endregion
 
 
 
