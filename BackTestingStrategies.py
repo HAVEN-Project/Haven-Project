@@ -51,5 +51,9 @@ class MyStrategy(Strategy):
         current_score = 0
         current_score = self.compute_score()
         self.score_indicator[-1] = current_score
-        if (current_score > 49): self.buy()
-        elif (current_score < 21): self.sell()
+        if (current_score > 49): 
+            self.position.close()
+            self.buy()
+        elif (current_score < 21): 
+            self.position.close()
+            self.sell()

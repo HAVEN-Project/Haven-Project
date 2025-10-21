@@ -33,4 +33,8 @@ stats = bt.run()
 
 print(stats)
 
+print("\n\n\n")
+
+print(stats['_trades'])
+
 bt.plot()
