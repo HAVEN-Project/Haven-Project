@@ -1115,22 +1115,3 @@ while True:#MENU
         while userInput != "1":
             userInput = input("Please Enter Your Choice: ")
 #endregion
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
