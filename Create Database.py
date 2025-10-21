@@ -30,8 +30,8 @@ cursor.execute('''
     )
 ''')
 cursor.execute('''
-    CREATE INDEX IF NOT EXISTS idx_hourly_symbol ON HourlyData(date, symbol)
+    CREATE INDEX IF NOT EXISTS idx_hourly_symbol ON HourlyData(symbol)
 ''')
 cursor.execute('''
-    CREATE INDEX IF NOT EXISTS idx_daily_symbol ON DailyData(date, symbol)
+    CREATE INDEX IF NOT EXISTS idx_daily_symbol ON DailyData(symbol)
 ''')
