@@ -27,7 +27,7 @@ df = df.rename(columns={
     'volume': 'Volume'
 })
 
-bt = Backtest(df, Phase1, cash=10_000, commission=0.002, exclusive_orders=True)
+bt = Backtest(df, Phase1, cash=10_000, commission=0.002, exclusive_orders=True, finalize_trades=True)
 
 stats = bt.run()
 
@@ -36,5 +36,9 @@ print(stats)
 print("\n\n\n")
 
 print(stats['_trades'])
+
+stats.to_csv('output_pandas.csv', index=True)
+
+stats['_trades'].to_csv('output_pandas_trades.csv', index=True)
 
 bt.plot()
