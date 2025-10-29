@@ -4,10 +4,10 @@ import sqlite3
 from datetime import datetime
 
 required_cols = ['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']
-tickers = ["TSLA", "NVDA", "GOOGL"]
+tickers = ["TSLA", "NVDA", "GOOGL", "SPY"]
 start_date = "2023-10-18"
 end_date = "2025-10-17"
-download_interval = "1h" # hourly (1h) daily is (1d)
+download_interval = "1d" # hourly (1h) daily is (1d)
 
 # Database configuration
 DB_NAME = "StockData.db"

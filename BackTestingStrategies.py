@@ -2,6 +2,7 @@ from backtesting import Strategy
 import pandas as pd
 import pandas_ta as ta
 import numpy as np
+from backtesting.lib import crossover
 
 class MyStrategy(Strategy):
     def init(self):
@@ -60,21 +61,42 @@ class MyStrategy(Strategy):
 
 class Xatrts(Strategy):
     def init(self):
-
-        #Getting Data
-        open = pd.Series(self.data.Open)
         high = pd.Series(self.data.High)
         low = pd.Series(self.data.Low)
         close = pd.Series(self.data.Close)
-        volume = pd.Series(self.data.Volume)
 
-        #indicators
-        self.atrts = self.I(lambda x, y, z: ta.atrts(x, y, z, length=14, k = 3.5), high, low, close)
+        # Compute ATR trailing stop
+        self.atrts = self.I(lambda h, l, c: ta.atrts(h, l, c, length=14, k=3.5), high, low, close)
+
+        self.adx = self.I(lambda x, y, z: ta.adx(x, y, z, length=12), high, low, close)
 
     def next(self):
-        if(self.data.Close > self.atrts):
-            self.position.close()
+        price = self.data.Close[-1]
+
+        # If we have no open position and price breaks ABOVE trailing stop → BUY
+        if not self.position and price > self.atrts[-1] and self.data.Close[-2] <= self.atrts[-2]:
             self.buy()
-        if(self.data.Close < self.atrts):
+
+        # If we are in a long position and price breaks BELOW trailing stop → SELL (exit)
+        elif self.position and price < self.atrts[-1]:
             self.position.close()
-            self.sell()
+
+class Phase1(Strategy):
+    def init(self):
+        high = pd.Series(self.data.High)
+        low = pd.Series(self.data.Low)
+        close = pd.Series(self.data.Close)
+
+        #ATR trailing stop loss
+        self.atrts = self.I(lambda h, l, c: ta.atrts(h, l, c, length=14, k=3.5), high, low, close)
+
+        #SMA 10,20
+        self.sma10 = self.I(lambda x: ta.sma(x, length=10), close)
+        self.sma20 = self.I(lambda x: ta.sma(x, length=20), close)
+
+    def next(self):
+        if not self.position and self.data.Close[-1] > self.atrts[-1] and self.data.Close[-2] <= self.atrts[-2] and self.sma10 > self.sma20:
+            self.buy()
+
+        elif self.position and self.data.Close[-1] < self.atrts[-1]:
+            self.position.close()

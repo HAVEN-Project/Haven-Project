@@ -6,7 +6,7 @@ import time
 time.sleep(2)
 from BackTestingStrategies import *
 
-stock = "NVDA"
+stock = "SPY"
 
 # Getting data from Database
 
@@ -14,10 +14,10 @@ conn = sqlite3.connect("StockData.db")
 
 cursor = conn.cursor()
 
-# Get Hourly Data for Chosen stock
-sql_query_hourly = "SELECT * FROM DailyData WHERE symbol = ?"
+# Get Daily Data for Chosen stock
+sql_query_daily = "SELECT * FROM DailyData WHERE symbol = ? AND date >= '2023-10-01 00:00:00'"
 
-df = pd.read_sql_query(sql=sql_query_hourly, con=conn, params=(stock,))
+df = pd.read_sql_query(sql=sql_query_daily, con=conn, params=(stock,))
 
 df = df.rename(columns={
     'open': 'Open',
@@ -27,7 +27,7 @@ df = df.rename(columns={
     'volume': 'Volume'
 })
 
-bt = Backtest(df, Xatrts, cash=10_000, commission=0.002, exclusive_orders=True)
+bt = Backtest(df, Phase1, cash=10_000, commission=0.002, exclusive_orders=True)
 
 stats = bt.run()
 
