@@ -4,9 +4,9 @@ import pandas_ta as ta
 from backtesting import Backtest
 import time
 time.sleep(2)
-from BackTestingStrategies import MyStrategy
+from BackTestingStrategies import *
 
-stock = "TSLA"
+stock = "NVDA"
 
 # Getting data from Database
 
@@ -15,7 +15,7 @@ conn = sqlite3.connect("StockData.db")
 cursor = conn.cursor()
 
 # Get Hourly Data for Chosen stock
-sql_query_hourly = "SELECT * FROM HourlyData WHERE symbol = ?"
+sql_query_hourly = "SELECT * FROM DailyData WHERE symbol = ?"
 
 df = pd.read_sql_query(sql=sql_query_hourly, con=conn, params=(stock,))
 
@@ -27,7 +27,7 @@ df = df.rename(columns={
     'volume': 'Volume'
 })
 
-bt = Backtest(df, MyStrategy, cash=10_000, commission=0.002)
+bt = Backtest(df, Xatrts, cash=10_000, commission=0.002, exclusive_orders=True)
 
 stats = bt.run()
 

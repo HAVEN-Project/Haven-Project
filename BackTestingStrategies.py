@@ -57,3 +57,24 @@ class MyStrategy(Strategy):
         elif (current_score < 21): 
             self.position.close()
             self.sell()
+
+class Xatrts(Strategy):
+    def init(self):
+
+        #Getting Data
+        open = pd.Series(self.data.Open)
+        high = pd.Series(self.data.High)
+        low = pd.Series(self.data.Low)
+        close = pd.Series(self.data.Close)
+        volume = pd.Series(self.data.Volume)
+
+        #indicators
+        self.atrts = self.I(lambda x, y, z: ta.atrts(x, y, z, length=14, k = 3.5), high, low, close)
+
+    def next(self):
+        if(self.data.Close > self.atrts):
+            self.position.close()
+            self.buy()
+        if(self.data.Close < self.atrts):
+            self.position.close()
+            self.sell()
