@@ -24,29 +24,50 @@ class MyStrategy(Strategy):
         #Score
         self.score_indicator = self.I(lambda: np.full_like(self.data.Close, np.nan))
 
-    def compute_score (self):
+    def compute_score_buy (self):
         #Calculates score out of 
-        score = 0
-        #SMA Trend
-        if(self.data.Close[-1] > self.sma20[-1]): score +=10
-        if(self.data.Close[-1] > self.sma50[-1]): score +=10
-
-        #SMA Cross
-        if (self.sma20[-1]> self.sma50[-1]): score +=10
-
-        #EMA Trend
-        if (self.ema12[-1] > self.ema26[-1]): score +=10
+        score = 0 # This should be a % from 0-100 (ex: 73% match)
+        #SMA 10 dip Trend
+        sma10dip = 0.032 #This is 3.2% by default
+        if "{sma10 dips {sma10dip}":
+            score += {"excel grabs sma10 weight out of 100"}
 
         #RSI
-        if ((self.rsi[-1] >= 40) & (self.rsi[-1] <= 70)): score += 10
-        if ((self.rsi[-1] >= 50) & (self.rsi[-1] <= 60)): score += 10
-        if (self.rsi[-1] > 80): score -5
+        if ((self.rsi[-1] >= 40) & (self.rsi[-1] <= 70)):
+            score += {"excel grabs RSI weight out of 100"}
 
-        #ADX
-        if (self.adx[-1] > 25): score += 10
-        if (self.adx[-1] > 40): score += 5
+        #ATR (Buy signal)
+        if 3 < {atr} < 4
+            score += {"excel grabs ATR weight out of 100"}
 
+        if stochastic crosses 20 from the bottom:
+            score += {"excel grabs stoch weight out of 100"}
+
+        if 3mogrowth is greater than 25%:
+            score += {"excel grabs 3mogrowth weight out of 100"}
+
+        if 1 yrgrwth is greater than 2%:
+            score += {"excel grabs 1yrgrwth weight out of 100"}
         return score
+
+    def compute_score_sell(self):
+        # Calculates score out of
+        score = 0  # This should be a % from 0-100 (ex: 73% match)
+        if self.position and price < self.atrts[-1]:
+            return 100 #returns 100% match to sell
+        if current profit > 15%:
+            return 100 #returns 100% match to sell
+        # RSI
+        if RSI > 70:
+            score += {"excel grabs RSI weight out of 100"}
+
+        if stochastic crosses 80 from the top:
+            score += {"excel grabs stoch weight out of 100"}
+
+
+
+
+
 
     def next(self):
         current_score = 0
