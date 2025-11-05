@@ -276,11 +276,6 @@ def GetConfig():
 
 #region Backtesting Logic
 
-
-
-
-
-
 class Mark0(Strategy):
     config = GetConfig()
     smaShort = config.sma.short
@@ -299,21 +294,21 @@ class Mark0(Strategy):
         volume = pd.Series(self.data.Volume)
 
         # Setting Up config
-        self.smaShort = MyStrategy.smaShort
+        self.smaShort = Mark0.smaShort
         #indicators
         if(self.config.sma.enabled):
             self.sma20 = self.I(lambda x: ta.sma(x, length=int(self.smaShort)), close)
-            self.sma50 = self.I(lambda x: ta.sma(x, length=int(MyStrategy.smaLong)), close)
+            self.sma50 = self.I(lambda x: ta.sma(x, length=int(Mark0.smaLong)), close)
 
         if(self.config.ema.enabled):
-            self.ema12 = self.I(lambda x: ta.ema(x, length=int(MyStrategy.emaShort)), close)
-            self.ema26 = self.I(lambda x: ta.ema(x, length=int(MyStrategy.emaLong)), close)
+            self.ema12 = self.I(lambda x: ta.ema(x, length=int(Mark0.emaShort)), close)
+            self.ema26 = self.I(lambda x: ta.ema(x, length=int(Mark0.emaLong)), close)
         
         if(self.config.rsi.enabled):
-            self.rsi = self.I(lambda x: ta.rsi(x, length=int(MyStrategy.rsi)), close)
+            self.rsi = self.I(lambda x: ta.rsi(x, length=int(Mark0.rsi)), close)
 
         if(self.config.adx.enabled):
-            self.adx = self.I(lambda x, y, z: ta.adx(x, y, z, length=int(MyStrategy.adx)), high, low, close)
+            self.adx = self.I(lambda x, y, z: ta.adx(x, y, z, length=int(Mark0.adx)), high, low, close)
 
         #Score
         self.score_indicator = self.I(lambda: np.full_like(self.data.Close, np.nan))
@@ -356,6 +351,41 @@ class Mark0(Strategy):
         elif (current_score < 21): 
             self.position.close()
             self.sell()
+
+class Mark1: 
+    config = GetConfig()
+    sma10len = config.sma10.length
+    stochKlen = config.stoch.klen
+    stochK = config.stoch.k
+    stochD = config.stoch.d
+    rsilen = config.rsi.length
+
+
+    def init(self):
+        
+        # getting data
+        open = pd.Series(self.data.Open)
+        high = pd.Series(self.data.High)
+        low = pd.Series(self.data.Low)
+        close = pd.Series(self.data.Close)
+        volume = pd.Series(self.data.Volume)
+
+        #indicators
+
+        #sma
+        if(self.config.sma.enabled):
+            self.sma10 = self.I(lambda x: ta.sma(x, length=int(self.sma10len)), close)
+        #stoch
+        if(self.config.stoch.enabled):
+            self.stoch = self.I(lambda x, y, z: ta.stoch(x, y, z, k=int(self.stochK), d=int(self.stochD), smooth_k=int(self.stochKlen)), high, low, close)
+        #rsi
+        if(self.config.rsi.enabled):
+            self.rsi = self.I(lambda x: ta.rsi(x, length=int(self.rsilen)), close)
+        #atrts
+        if(self.config.atrts.enabled):
+            self.atrts = self.I(lambda h, l, c: ta.atrts(h, l, c, length=14, k=3.5), high, low, close)
+    def next(self):
+        apple = apple
 
 #endregion
 
@@ -407,4 +437,4 @@ stock = [ticker]
 
 DataDownloader(stock, ticker)
 
-BackTest(ticker, MyStrategy)
+BackTest(ticker, Mark1)
