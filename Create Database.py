@@ -15,7 +15,8 @@ cursor.execute('''
         high REAL NOT NULL,
         low REAL NOT NULL,
         close REAL NOT NULL,
-        volume REAL NOT NULL
+        volume REAL NOT NULL,
+        UNIQUE (symbol, date)
     )
 ''')
 cursor.execute('''
@@ -26,7 +27,8 @@ cursor.execute('''
         high REAL NOT NULL,
         low REAL NOT NULL,
         close REAL NOT NULL,
-        volume REAL NOT NULL
+        volume REAL NOT NULL,
+        UNIQUE (symbol, date)
     )
 ''')
 cursor.execute('''
@@ -34,4 +36,10 @@ cursor.execute('''
 ''')
 cursor.execute('''
     CREATE INDEX IF NOT EXISTS idx_daily_symbol ON DailyData(symbol)
+''')
+cursor.execute('''
+    CREATE INDEX IF NOT EXISTS idx_Hourly_symbol_date ON HourlyData(symbol, date)
+''')
+cursor.execute('''
+    CREATE INDEX IF NOT EXISTS idx_daily_symbol_date ON DailyData(symbol, date)
 ''')
