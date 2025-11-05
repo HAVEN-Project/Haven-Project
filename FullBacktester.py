@@ -276,7 +276,12 @@ def GetConfig():
 
 #region Backtesting Logic
 
-class MyStrategy(Strategy):
+
+
+
+
+
+class Mark0(Strategy):
     config = GetConfig()
     smaShort = config.sma.short
     smaLong = config.sma.long
