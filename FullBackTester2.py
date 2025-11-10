@@ -1,14 +1,15 @@
-import sqlite3
+import time, os
 import yfinance as yf
 import pandas as pd
-from datetime import datetime
+import sqlite3
 from types import SimpleNamespace
 import re
-from backtesting import Strategy
 import numpy as np
+import backtrader as bt
 import pandas_ta as ta
-from backtesting import Backtest
-import time
+from datetime import datetime
+from backtrader import feeds
+
 
 #region DataBase Creation
 
@@ -308,229 +309,116 @@ def GetScoringConfig():
 
 #endregion
 
-#region Backtesting Logic
+#region Backtesting logic
 
-'''class Mark0(Strategy):
-    config = GetConfig()
-    smaShort = config.sma.short
-    smaLong = config.sma.long
-    emaShort = config.ema.short
-    emaLong = config.ema.long
-    rsi = config.rsi.length
-    adx = config.adx.length
-    
-    def init(self):
-        # getting data
-        open = pd.Series(self.data.Open)
-        high = pd.Series(self.data.High)
-        low = pd.Series(self.data.Low)
-        close = pd.Series(self.data.Close)
-        volume = pd.Series(self.data.Volume)
-
-        # Setting Up config
-        self.smaShort = Mark0.smaShort
-        #indicators
-        if(self.config.sma.enabled):
-            self.sma20 = self.I(lambda x: ta.sma(x, length=int(self.smaShort)), close)
-            self.sma50 = self.I(lambda x: ta.sma(x, length=int(Mark0.smaLong)), close)
-
-        if(self.config.ema.enabled):
-            self.ema12 = self.I(lambda x: ta.ema(x, length=int(Mark0.emaShort)), close)
-            self.ema26 = self.I(lambda x: ta.ema(x, length=int(Mark0.emaLong)), close)
-        
-        if(self.config.rsi.enabled):
-            self.rsi = self.I(lambda x: ta.rsi(x, length=int(Mark0.rsi)), close)
-
-        if(self.config.adx.enabled):
-            self.adx = self.I(lambda x, y, z: ta.adx(x, y, z, length=int(Mark0.adx)), high, low, close)
-
-        #Score
-        self.score_indicator = self.I(lambda: np.full_like(self.data.Close, np.nan))
-
-    def compute_score (self):
-        #Calculates score out of 
-        score = 0
-        #SMA Trend
-        if(self.config.sma.enabled):
-            if(self.data.Close[-1] > self.sma20[-1]): score +=10
-            if(self.data.Close[-1] > self.sma50[-1]): score +=10
-
-        #SMA Cross
-            if (self.sma20[-1]> self.sma50[-1]): score +=10
-
-        #EMA Trend
-        if(self.config.ema.enabled):
-            if (self.ema12[-1] > self.ema26[-1]): score +=10
-
-        #RSI
-        if(self.config.rsi.enabled):
-            if ((self.rsi[-1] >= 40) & (self.rsi[-1] <= 70)): score += 10
-            if ((self.rsi[-1] >= 50) & (self.rsi[-1] <= 60)): score += 10
-            if (self.rsi[-1] > 80): score -5
-
-        #ADX
-        if(self.config.adx.enabled):
-            if (self.adx[-1] > 25): score += 10
-            if (self.adx[-1] > 40): score += 5
-
-        return score
-
-    def next(self):
-        current_score = 0
-        current_score = self.compute_score()
-        self.score_indicator[-1] = current_score
-        if (current_score > 49): 
-            self.position.close()
-            self.buy()
-        elif (current_score < 21): 
-            self.position.close()
-            self.sell()
-    '''
-
-def growth(close, length):
-        return (close / close.shift(length) - 1) * 100
-
-class Mark1(Strategy): 
+class Mark0(bt.Strategy):
     config = GetConfig()
     scoringconfig = GetScoringConfig()
-    sma10len = config.sma10.length
-    stochKlen = config.stoch.klen
-    stochK = config.stoch.k
-    stochD = config.stoch.d
-    rsilen = config.rsi.length
-    atrtsK = config.atrts.k
-    atrtsLength = config.atrts.length
-    atrlength = config.atr.length
-
-
-    def init(self):
-        
-        # getting data
-        open = pd.Series(self.data.Open)
-        high = pd.Series(self.data.High)
-        low = pd.Series(self.data.Low)
-        close = pd.Series(self.data.Close)
-        volume = pd.Series(self.data.Volume)
-
-        #indicators
-
-        #sma
-        if(self.config.sma10.enabled):
-            self.sma10 = self.I(lambda x: ta.sma(x, length=int(self.sma10len)), close)
-
-            self.insma10dip = False
-            self.diplow = 0
-            self.dipstart = 0
-        #stoch
-        if(self.config.stoch.enabled):
-            self.stoch = self.I(lambda x, y, z: ta.stoch(x, y, z, k=int(self.stochK), d=int(self.stochD), smooth_k=int(self.stochKlen)), high, low, close)
-        #rsi
-        if(self.config.rsi.enabled):
-            self.rsi = self.I(lambda x: ta.rsi(x, length=int(self.rsilen)), close)
-        #atrts
-        if(self.config.atrts.enabled):
-            self.atrts = self.I(lambda h, l, c: ta.atrts(h, l, c, length=int(self.atrtsLength), k=int(self.atrtsK)), high, low, close)
-        #Growth
-        if(self.config.growth.enabled):
-            self.threemonths = self.I(growth, close, 66)
-            #self.oneyear = self.I(growth, close, 252)
-        #Atr
-        self.atr = self.I(lambda x, y, z: ta.atr(x, y, z, length=int(self.atrlength)), high, low, close)
-        #sma Dips)
-        
-    def sma10dips(self):
-
-        if (self.sma10[-1] < self.sma10[-2]):
-            if not self.insma10dip:
-                self.insma10dip = True
-                self.dipstart = self.sma10[-1]
-            else:
-                self.diplow = min(self.diplow, self.sma10[-1])
-        elif (self.insma10dip == True and self.sma10[-1] > self.sma10[-2]):
-                dip_depth = self.dipstart - self.diplow
-                dip_depth_pct = (dip_depth / self.dipstart) * 100
-
-                self.insma10dip = False
-                self.diplow = False
-                self.dipstart = False
-                return dip_depth_pct
-        
-    def compute_score_buy(self):
-        # Calculates score out of
-        score = 0  # This should be a % from 0-100 (ex: 73% match)
-        # SMA 10 dip Trend
-        dip_pct = self.sma10dips()
-        if not dip_pct:
-            dip_pct = 0
-        sma10dip = 0.032  # This is 3.2% by default
-        if (sma10dip < dip_pct):
-            score += self.scoringconfig.smadip.smadip
     
-            # RSI
-        if ((self.rsi[-1] >= 40) & (self.rsi[-1] <= 70)):
-            score += self.scoringconfig.rsi.rsi
+    def log(self, txt, dt=None):
+        ''' Logging function fot this strategy'''
+        dt = dt or self.datas[0].datetime.date(0)
+        print('%s, %s' % (dt.isoformat(), txt))
 
-        # ATR (Buy signal)
-        if 3 < self.atr[-1] < 4:
-            score += self.scoringconfig.atr.atr
+    def __init__(self):
+        self.sma10 = bt.indicators.MovingAverageSimple(self.datas[0], period = 10)
+        self.stoch = bt.indicators.Stochastic(self.datas[0])
+        self.rsi = bt.indicators.RSI(self.datas[0])
+        
+        self.order = None
 
-        if (self.stoch[-1] > 20 and self.stoch[-2]):
-            score += self.scoringconfig.stoch.stoch
+        bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
+        bt.indicators.WeightedMovingAverage(self.datas[0], period=25,
+                                            subplot=True)
+        bt.indicators.StochasticSlow(self.datas[0])
+        bt.indicators.MACDHisto(self.datas[0])
+        rsi = bt.indicators.RSI(self.datas[0])
+        bt.indicators.SmoothedMovingAverage(rsi, period=10)
+        bt.indicators.ATR(self.datas[0], plot=False)
 
-        if(self.config.growth.enabled):
-            if (self.threemonths[-1]) > 25:
-                score += self.scoringconfig.threemonths.threemonths
 
-            # if self.oneyear[-1] > 2 :
-            #     score += self.scoringconfig.oneyear.oneyear
-        return score
+    def notify_order(self, order):
+        if order.status in [order.Submitted, order.Accepted]:
+            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
+            return
 
-    def compute_score_sell(self):
-        # Calculates score out of
-        score = 0  # This should be a % from 0-100 (ex: 73% match)
-        #if self.position and self.data.Close[-1] < self.atrts[-1] and self.data.Close[-2] <= self.atrts[-2]:
-        #     return 100  # returns 100% match to sell
-        if self.trades:
-            if self.trades[-1].entry_price * 1.15 < self.data.Close[-1]:
-                return 100  # returns 100% match to sell
-        # RSI
-        if self.rsi[-1] > 70:
-            score += 5
+        # Check if an order has been completed
+        # Attention: broker could reject order if not enough cash
+        if order.status in [order.Completed]:
+            if order.isbuy():
+                self.log(
+                    'BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                    (order.executed.price,
+                     order.executed.value,
+                     order.executed.comm))
 
-        if self.stoch[-1] < 70 and self.stoch[-2] > 70:
-            score += 5  
-            
-        return score
+                self.buyprice = order.executed.price
+                self.buycomm = order.executed.comm
+            else:  # Sell
+                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
+                         (order.executed.price,
+                          order.executed.value,
+                          order.executed.comm))
+
+            self.bar_executed = len(self)
+
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.log('Order Canceled/Margin/Rejected')
+
+        self.order = None
+
+    def notify_trade(self, trade):
+        if not trade.isclosed:
+            return
+
+        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
+                 (trade.pnl, trade.pnlcomm))
 
     def next(self):
-        buyscore = self.compute_score_buy()
-        sellscore = self.compute_score_sell()
-        atr = self.atr[-1]
+        # Simply log the closing price of the series from the reference
+        self.log('Close, %.2f' % self.dataclose[0])
 
-        # Buy condition
-        if buyscore >= self.scoringconfig.buy.buy and not self.position:
-            self.buy()
+        # Check if an order is pending ... if yes, we cannot send a 2nd one
+        if self.order:
+            return
 
-        # Sell condition
-        if sellscore > self.scoringconfig.sell.sell and self.position:
-            self.position.close()
+        # Check if we are in the market
+        if not self.position:
+            self.order = self.buy()
+            # Not yet ... we MIGHT BUY if ...
+            # if self.data.close[0] > self.sma10[0]:
 
+            #     # BUY, BUY, BUY!!! (with all possible default parameters)
+            #     self.log('BUY CREATE, %.2f' % self.dataclose[0])
+
+            #     # Keep track of the created order to avoid a 2nd order
+            #     self.order = self.buy()
+
+        else:
+
+            if self.data.close[0] < self.sma10[0]:
+                # SELL, SELL, SELL!!! (with all possible default parameters)
+                self.log('SELL CREATE, %.2f' % self.dataclose[0])
+
+                # Keep track of the created order to avoid a 2nd order
+                self.order = self.sell()
 #endregion
 
-#region Runs Backtest
-
-def BackTest(stock, MyStrategy):
-
-    # Getting data from Database
-
+def BackTest(stock, Mark0):
     conn = sqlite3.connect("StockData.db")
 
     cursor = conn.cursor()
 
     # Get Daily Data for Chosen stock
-    sql_query_daily = "SELECT * FROM DailyData WHERE symbol = ? AND date >= '2023-10-01 00:00:00'"
+    sql_query_daily = "SELECT * FROM DailyData WHERE symbol = ? AND date >= '2023-10-01 00:00:00' ORDER BY date ASC"
 
-    df = pd.read_sql_query(sql=sql_query_daily, con=conn, params=(stock,))
+    df = pd.read_sql_query(
+    sql_query_daily,
+    con=conn,
+    params=(stock,),
+    parse_dates=["date"],
+    index_col="date",
+)
 
     df = df.rename(columns={
         'open': 'Open',
@@ -539,30 +427,44 @@ def BackTest(stock, MyStrategy):
         'close': 'Close',
         'volume': 'Volume'
     })
+    
+          
+    cerebro = bt.Cerebro()
 
-    bt = Backtest(df, Mark1, cash=10_000, commission=0.002, exclusive_orders=True, finalize_trades=True)
+    cerebro.addstrategy(Mark0)
 
-    stats = bt.run()
+    df.index = pd.to_datetime(df.index) 
+    
+    data_feed = feeds.PandasData(
+        dataname=df,
+    )
 
-    print(stats)
+    cerebro.adddata(data_feed)
 
-    print("\n\n\n")
+    # Set our desired cash start
+    cerebro.broker.setcash(100000.0)
 
-    print(stats['_trades'])
+    # Add a FixedSize sizer according to the stake
+    cerebro.addsizer(bt.sizers.FixedSize, stake=10)
 
-    stats.to_csv('output_pandas.csv', index=True)
+    # Set the commission
+    cerebro.broker.setcommission(commission=0.0)
 
-    stats['_trades'].to_csv('output_pandas_trades.csv', index=True)
+    # Print out the starting conditions
+    print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-    bt.plot()
+    # Run over everything
+    cerebro.run()
 
-    conn.close()
+    # Print out the final result
+    print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-#endregion
+    cerebro.plot()
+
 ticker = input("Enter Stock to back test: ")
 
 stock = [ticker]
 
 DataDownloader(stock, ticker)
 
-BackTest(ticker, Mark1)
+BackTest(ticker, Mark0)
