@@ -4,8 +4,8 @@ import sqlite3
 from datetime import datetime
 
 required_cols = ['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']
-tickers = ["TSLA", "NVDA", "GOOGL", "SPY", "AAPL"]
-start_date = "2023-10-18"
+tickers = ["TSLA", "NVDA", "GOOGL", "SPY", "AAPL", "COIN", "SPY", "MSFT", "ORCL", "AMZN", "META", "PLTR"]
+start_date = "2023-10-01"
 end_date = "2025-10-17"
 download_interval = "1d" # hourly (1h) daily is (1d)
 

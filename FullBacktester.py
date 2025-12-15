@@ -66,7 +66,7 @@ def DataDownloader(tickers, ticker):
     required_cols = ['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']
     
     start_date = "2023-10-18"
-    end_date = "2025-10-17"
+    end_date = "2025-1-17"
     download_interval = "1d" # hourly (1h) daily is (1d)
 
     # Database configuration
@@ -488,7 +488,7 @@ class Mark1(Strategy):
     def compute_score_sell(self):
         # Calculates score out of
         score = 0  # This should be a % from 0-100 (ex: 73% match)
-        #if self.position and self.data.Close[-1] < self.atrts[-1] and self.data.Close[-2] <= self.atrts[-2]:
+        # if self.position and self.data.Close[-1] < self.atrts[-1] and self.data.Close[-2] <= self.atrts[-2]:
         #     return 100  # returns 100% match to sell
         if self.trades:
             if self.trades[-1].entry_price * 1.15 < self.data.Close[-1]:

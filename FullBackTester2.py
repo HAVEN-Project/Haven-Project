@@ -1,14 +1,18 @@
 import time, os
+import quantstats as qs
 import yfinance as yf
 import pandas as pd
 import sqlite3
 from types import SimpleNamespace
 import re
 import numpy as np
+from backtrader_plotly.plotter import BacktraderPlotly
+from backtrader_plotly.scheme import PlotScheme
 import backtrader as bt
 import pandas_ta as ta
 from datetime import datetime
 from backtrader import feeds
+import plotly.express as px
 
 
 #region DataBase Creation
@@ -62,11 +66,11 @@ conn.close()
 
 #region DataDownload
 
-def DataDownloader(tickers, ticker):
+def DataDownloader(tickers):
     
     required_cols = ['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']
     
-    start_date = "2023-10-18"
+    start_date = "2023-10-01"
     end_date = "2025-10-17"
     download_interval = "1d" # hourly (1h) daily is (1d)
 
@@ -80,13 +84,13 @@ def DataDownloader(tickers, ticker):
     cursor = conn.cursor()
 
     # Example: get the last date we have for a stock
-    cursor.execute("SELECT MAX(date) FROM DailyData WHERE symbol=?", (ticker,))
-    last_date = cursor.fetchone()[0]  # this returns 'YYYY-MM-DD' or None if no data
+    # cursor.execute("SELECT MAX(date) FROM DailyData WHERE symbol=?", (tickers,))
+    # last_date = cursor.fetchone()[0]  # this returns 'YYYY-MM-DD' or None if no data
 
-    if last_date:
-        last_date = datetime.strptime(last_date, "%Y-%m-%d %H:%M:%S")
-        # Download data for all tickers at once
-    else: "max"
+    # if last_date:
+    #     last_date = datetime.strptime(last_date, "%Y-%m-%d %H:%M:%S")
+    #     # Download data for all tickers at once
+    # else: "max"
         
     attempts = 0
     data = None
@@ -94,7 +98,7 @@ def DataDownloader(tickers, ticker):
     while attempts < 3:
         try:
             # Download with date range
-            data = yf.download(ticker ,start=last_date, period="max", group_by='ticker', interval=download_interval)
+            data = yf.download(tickers , start= start_date, period="max", group_by='ticker', interval=download_interval)
             print("Download successful!")
             break
         except Exception as e:
@@ -269,7 +273,7 @@ def GetConfig():
     config = SimpleNamespace(**{k: SimpleNamespace(**v) for k, v in nested_params.items()})
 
     # Access like config.speed.value, config.speed.direction
-    print(config)
+    # print(config)
 
     return config
 
@@ -303,143 +307,372 @@ def GetScoringConfig():
     ScoringConfig = SimpleNamespace(**{k: SimpleNamespace(**v) for k, v in nested_params.items()})
 
     # Access like config.speed.value, config.speed.direction
-    print(ScoringConfig)
+    # print(ScoringConfig)
 
     return ScoringConfig
 
 #endregion
 
-#region Backtesting logic
+#region Backtester Custom Indicators
+class Growth(bt.Indicator):
+    '''
+    Growth = (data / data[-period]) - 1
 
-class Mark0(bt.Strategy):
-    config = GetConfig()
-    scoringconfig = GetScoringConfig()
-    
-    def log(self, txt, dt=None):
-        ''' Logging function fot this strategy'''
-        dt = dt or self.datas[0].datetime.date(0)
-        print('%s, %s' % (dt.isoformat(), txt))
+    By default uses close price and a 20‑bar lookback.
+    '''
+    lines = ('growth',)
+    params = dict(
+        period=20,
+        data=None,   # allow custom data line; fallback to self.data
+    )
 
     def __init__(self):
-        self.sma10 = bt.indicators.MovingAverageSimple(self.datas[0], period = 10)
-        self.stoch = bt.indicators.Stochastic(self.datas[0])
-        self.rsi = bt.indicators.RSI(self.datas[0])
+        # choose input line
+        data = self.p.data if self.p.data is not None else self.data
+
+        # ensure we have enough bars
+        self.addminperiod(self.p.period + 1)
+
+        # vectorized line operation: current / past - 1
+        self.l.growth = data / data(-self.p.period) - 1.0
+
+#endregion
+
+#region Backtesting logic
+
+class mark1(bt.Strategy):
+    config = GetConfig()
+    scoringconfig = GetScoringConfig()
+    buyscore = int(scoringconfig.buy.buy)
+    sellscore = int(scoringconfig.sell.sell)
+    sma10len   = int(config.sma10.length)
+    stochKlen  = int(config.stoch.klen)
+    stochK     = int(config.stoch.k)
+    stochD     = int(config.stoch.d)
+    rsilen     = int(config.rsi.length)
+    atrtsK     = int(config.atrts.k)
+    atrtsLength = int(config.atrts.length)
+    atrlength  = int(config.atr.length)
+
+    def __init__(self):
+        self.sma10 = []
+        for d in self.datas:
+            self.sma10.append(bt.indicators.SMA(d.close, period = self.sma10len))
+        self.stoch = []
+        for d in self.datas:
+            self.stoch.append(bt.indicators.Stochastic(d, period = self.stochKlen, period_dfast = self.stochK, period_dslow = self.stochD))
+        self.rsi = []
+        for d in self.datas:
+            self.rsi.append(bt.indicators.RSI(d.close, period = self.rsilen))
+        self.atr = []
+        for d in self.datas:
+            self.atr.append(bt.indicators.ATR(d, period= self.atrlength))
+        n = len(self.datas)
+        self.insma10dip = [False] * n
+        self.dipstart   = [None] * n
+        self.diplow     = [None] * n
+        print('sma10len', self.sma10len, type(self.sma10len))
+        print('stochKlen', self.stochKlen, 'stochK', self.stochK, 'stochD', self.stochD)
+        print('rsilen', self.rsilen, 'atrlength', self.atrlength)
+        #self.threemonths = Growth(d.data, period = 66)
+        #self.oneyear = Growth(d.data, period = 252)
+        self.values = []
+
+        self.open_positions = set()          # data indices you own
+        self.buy_orders = {}
+        self.sell_orders = {}
+
+        self.entry_dates = {d: None for d in self.datas}
         
-        self.order = None
+        self.trades = []   # list of dicts with per-trade info
+        self._open_trades = {}
+        # thresholds
+        self.sell_threshold = -0.3
 
-        bt.indicators.ExponentialMovingAverage(self.datas[0], period=25)
-        bt.indicators.WeightedMovingAverage(self.datas[0], period=25,
-                                            subplot=True)
-        bt.indicators.StochasticSlow(self.datas[0])
-        bt.indicators.MACDHisto(self.datas[0])
-        rsi = bt.indicators.RSI(self.datas[0])
-        bt.indicators.SmoothedMovingAverage(rsi, period=10)
-        bt.indicators.ATR(self.datas[0], plot=False)
+        self.datetimes = []
+
+        self.asset_value = {d: [] for d in self.datas}
+        self.asset_dates = []
+        self.portfolio_value = []
+        
+        self.asset_pnl = {d: [] for d in self.datas}   # running PnL per stock
+        self.asset_pnl_dates = []                      # timestamps for PnL updates
+        self._pnl_by_data = {d: 0.0 for d in self.datas}  # internal accumulator
+
+        self._last_exec_price = {d: None for d in self.datas}
+        self._entry_info = {d: None for d in self.datas} 
 
 
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
-            return
+    def sma10dips(self, i):
+        cur = self.sma10[i][0]
+        prev = self.sma10[i][-1]
 
-        # Check if an order has been completed
-        # Attention: broker could reject order if not enough cash
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log(
-                    'BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                    (order.executed.price,
-                     order.executed.value,
-                     order.executed.comm))
+        # still in / entering dip
+        if cur < prev:
+            if not self.insma10dip[i]:
+                self.insma10dip[i] = True
+                self.dipstart[i] = prev
+                self.diplow[i] = cur
+            else:
+                self.diplow[i] = min(self.diplow[i], cur)
+            return None  # dip still forming
 
-                self.buyprice = order.executed.price
-                self.buycomm = order.executed.comm
-            else:  # Sell
-                self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
-                         (order.executed.price,
-                          order.executed.value,
-                          order.executed.comm))
+        # dip ended: compute depth
+        if self.insma10dip[i] and cur > prev:
+            dip_depth = self.dipstart[i] - self.diplow[i]
+            dip_depth_pct = (dip_depth / self.dipstart[i]) * 100
 
-            self.bar_executed = len(self)
+            self.insma10dip[i] = False
+            self.diplow[i] = None
+            self.dipstart[i] = None
+            return dip_depth_pct
 
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
+        return None
 
-        self.order = None
+    def compute_score_buy(self, i):
+        # Calculates score out of
+        score = 0  # This should be a % from 0-100 (ex: 73% match)
+        # SMA 10 dip Trend
+        dip_pct = self.sma10dips(i)
+        if not dip_pct:
+            dip_pct = 0
+        sma10dip = 0.032  # This is 3.2% by default
+        if (sma10dip < dip_pct):
+            score += self.scoringconfig.smadip.smadip
+    
+            # RSI
+        if (40 <= self.rsi[i][0] <= 70):
+            score += self.scoringconfig.rsi.rsi
 
+        # ATR (Buy signal)
+        if (3 < self.atr[i][0] < 4):
+            score += self.scoringconfig.atr.atr
+
+        if (self.stoch[i][0] > 20 and self.stoch[i][-1]):
+            score += self.scoringconfig.stoch.stoch
+
+        if(self.config.growth.enabled):
+            if (self.threemonths[i][0]) > 25:
+                score += self.scoringconfig.threemonths.threemonths
+
+            # if self.oneyear[-1] > 2 :
+            #     score += self.scoringconfig.oneyear.oneyear
+        return score
+
+    def compute_score_sell(self, i):
+        # Get Positions
+        d = self.datas[i]
+        pos = self.getposition(d)
+        entry_price = pos.price
+        current_price = d.close[0]
+        # Calculates score out of
+        score = 0  # This should be a % from 0-100 (ex: 73% match)
+        #if self.position and self.data.Close[-1] < self.atrts[-1] and self.data.Close[-2] <= self.atrts[-2]:
+        #     return 100  # returns 100% match to sell
+        if pos.size != 0:
+            if entry_price * 1.15 < current_price:
+                return 100  # returns 100% match to sell
+        # RSI
+        if self.rsi[i][0] > 70:
+            score += 5
+
+        if self.stoch[i][0] < 70 and self.stoch[i][-1] > 70:
+            score += 5  
+            
+        entry_dt = self.entry_dates.get(d)
+        if entry_dt is not None:
+            now_dt = self.datas[0].datetime.datetime(0)
+            held_days = (now_dt - entry_dt).days
+            # if held_days > 14:
+            #     score = max(score, 100)  # force strong sell signal
+
+        return score
+        
+    def next(self):
+        scores = []
+        for i, d in enumerate(self.datas):
+            score = self.compute_score_buy(i)  # per-asset scorer you already made
+            scores.append((score, i, d))
+        ranked = sorted(scores, reverse=True)
+
+        score_threshold = self.buyscore
+        top_n = 5
+
+        filtered = [x for x in ranked if x[0] >= score_threshold]
+
+        top_assets = filtered[:top_n]
+
+        # Keep track of what you already own
+        top_is = [x[1] for x in top_assets]
+
+        dt = self.datas[0].datetime.datetime(0)
+        self.asset_dates.append(dt)
+        self.asset_pnl_dates.append(dt)
+
+        # Per-asset position value (NaN when flat so returns work)
+        for d in self.datas:
+            self.asset_pnl[d].append(self._pnl_by_data[d])
+            pos = self.getposition(d)
+            if pos.size != 0:
+                value = pos.size * d.close[0]
+            else:
+                value = float('nan')
+            self.asset_value[d].append(value)
+
+        # Portfolio equity
+        self.portfolio_value.append(self.broker.getvalue())
+
+
+
+        for i, d in enumerate(self.datas):
+            pos = self.getposition(d)  # Position object
+            # if pos: 
+            #     print(pos)
+            pos_size = pos.size  # positive -> long, negative -> short, 0 -> flat
+
+            # If this asset is in the top N, ensure we have a long position (20%)
+            if i in top_is:
+                # Only open a long if we don't already have a long
+                if pos_size <= 0:  # covers both flat and existing short (avoid auto-short)
+                    # If there's an existing short, explicitly avoid sending a sell to increase short
+                    # Instead we set target to +20% which will instruct broker to move to long
+                    # (Backtrader will create orders to reach that target; we still are explicit).
+                    self.order_target_percent(data=d, target=0.20)
+            else:
+                # Not in top N: liquidate only if we currently hold a long
+                if pos_size > 0:
+                    sell_score = self.compute_score_sell(i)
+
+                    # Use order_target_percent to target 0% allocation (liquidate long).
+                    # This is safer than self.sell() which could be misused and open a short in some cases.
+                    if(sell_score > self.sellscore):
+                        self.order_target_percent(data=d, target=0.0)
+
+        # Save portfolio metrics for plotting
+        self.values.append(self.broker.getvalue())
+        self.datetimes.append(self.datas[0].datetime.datetime(0))
+        print("Cash:", self.broker.get_cash())
+    
     def notify_trade(self, trade):
         if not trade.isclosed:
             return
 
-        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
-                 (trade.pnl, trade.pnlcomm))
+        d = trade.data          # the data feed (stock) this trade belongs to
 
-    def next(self):
-        # Simply log the closing price of the series from the reference
-        self.log('Close, %.2f' % self.dataclose[0])
+        entry = self._entry_info.get(d) or {}
+        entry_size = entry.get("size")
+        entry_price = entry.get("price_open")
+        price_close = self._last_exec_price.get(d)
 
-        # Check if an order is pending ... if yes, we cannot send a 2nd one
-        if self.order:
+        dt_close = self.datas[0].datetime.datetime(0)
+        dt_open = self.entry_dates.get(d)
+
+        record = {
+            "symbol": d._name,
+            "datetime_open": dt_open,
+            "datetime_close": dt_close,
+            "size": entry_size,
+            "total_value": entry_size * entry_price,
+            "price_open": entry_price,       # average entry price
+            "price_close": price_close,
+            "pnl_gross": trade.pnl,
+            "pnl_net": trade.pnlcomm,
+            "Return %": (((entry_size * price_close) / (entry_size * entry_price)) - 1) * 100,
+        }
+        self.trades.append(record)
+
+        self._pnl_by_data[d] += trade.pnlcomm  # add net PnL of this trade
+
+
+    def notify_order(self, order):
+        # Use safe checks and avoid referencing non-existent attributes
+        if order.status in [order.Submitted, order.Accepted]:
             return
 
-        # Check if we are in the market
-        if not self.position:
-            self.order = self.buy()
-            # Not yet ... we MIGHT BUY if ...
-            # if self.data.close[0] > self.sma10[0]:
+        if order.status == order.Completed:
+            side = 'BUY' if order.isbuy() else 'SELL'
+            print(f"Order completed: {order.data._name} Side: {side} Size: {order.size} Price: {order.executed.price}")
+            d = order.data
+            dt = self.datas[0].datetime.datetime(0)
 
-            #     # BUY, BUY, BUY!!! (with all possible default parameters)
-            #     self.log('BUY CREATE, %.2f' % self.dataclose[0])
+            self._last_exec_price[d] = order.executed.price
 
-            #     # Keep track of the created order to avoid a 2nd order
-            #     self.order = self.buy()
+            if order.isbuy():
+                print("BUY filled", d._name, "at", dt)
+                # store entry info when opening the trade
+                self._entry_info[d] = {
+                    "size": order.executed.size,
+                    "price_open": order.executed.price,
+                }
+                self.entry_dates[d] = dt
+            else:
+                # on sell, clear entry date
+                self.entry_dates[d] = None
 
-        else:
+            
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            print(f"Order FAILED: {getattr(order.data, '_name', 'N/A')} Status: {order.status}")
+            
+    def stop(self):
+        # If you still have an open position, close it
+        if self.position.size != 0:
+            self.close()        # closes long or short
+            print("Closing all open positions at end of backtest.")
 
-            if self.data.close[0] < self.sma10[0]:
-                # SELL, SELL, SELL!!! (with all possible default parameters)
-                self.log('SELL CREATE, %.2f' % self.dataclose[0])
-
-                # Keep track of the created order to avoid a 2nd order
-                self.order = self.sell()
 #endregion
 
-def BackTest(stock, Mark0):
+def BackTest(tickers, Mark0):
     conn = sqlite3.connect("StockData.db")
 
     cursor = conn.cursor()
 
-    # Get Daily Data for Chosen stock
-    sql_query_daily = "SELECT * FROM DailyData WHERE symbol = ? AND date >= '2023-10-01 00:00:00' ORDER BY date ASC"
-
-    df = pd.read_sql_query(
-    sql_query_daily,
-    con=conn,
-    params=(stock,),
-    parse_dates=["date"],
-    index_col="date",
-)
-
-    df = df.rename(columns={
-        'open': 'Open',
-        'high': 'High',
-        'low': 'Low',
-        'close': 'Close',
-        'volume': 'Volume'
-    })
-    
-          
     cerebro = bt.Cerebro()
 
     cerebro.addstrategy(Mark0)
 
-    df.index = pd.to_datetime(df.index) 
-    
-    data_feed = feeds.PandasData(
-        dataname=df,
+    # Get Daily Data for Chosen stock
+    sql_query_daily = "SELECT * FROM DailyData WHERE symbol = ? AND date >= '2023-10-01 00:00:00' ORDER BY date ASC"
+
+    master_data_feed = None
+
+    for ticker in tickers:
+        df = pd.read_sql_query(
+        sql_query_daily,
+        con=conn,
+        params=(ticker,),
+        parse_dates=["date"],
+        index_col="date",
     )
 
-    cerebro.adddata(data_feed)
+        df = df.rename(columns={
+            'open': 'Open',
+            'high': 'High',
+            'low': 'Low',
+            'close': 'Close',
+            'volume': 'Volume'
+        })
+        
+            
+
+
+
+        df.index = pd.to_datetime(df.index) 
+        
+        data_feed = feeds.PandasData(
+            dataname=df,
+            name=ticker
+        )
+        # print(ticker, df.shape, df.head(), df.tail())
+
+        # Set all other data feeds to plot on the first (master) chart
+        # if master_data_feed is None:
+        #     master_data_feed = data_feed  # first ticker becomes master
+        # else:
+        #     data_feed.plotinfo.plotmaster = master_data_feed
+
+
+        cerebro.adddata(data_feed)
+
 
     # Set our desired cash start
     cerebro.broker.setcash(100000.0)
@@ -449,22 +682,153 @@ def BackTest(stock, Mark0):
 
     # Set the commission
     cerebro.broker.setcommission(commission=0.0)
+    cerebro.broker.set_shortcash(False)
+
+    
+
+    cerebro.addanalyzer(bt.analyzers.TimeReturn, _name='time_return')
+    # cerebro.addanalyzer(bt.analyzers.PyFolio, _name='pyfolio')
 
     # Print out the starting conditions
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
     # Run over everything
-    cerebro.run()
+    backtest_result = cerebro.run()
 
     # Print out the final result
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
-    cerebro.plot()
+    # Get the strategy instance
+    strategy = backtest_result[0]
 
-ticker = input("Enter Stock to back test: ")
+    df = pd.DataFrame({
+    'datetime': strategy.datetimes,
+    'portfolio_value': strategy.values
+    })
 
-stock = [ticker]
+    # asset_equity = {}
 
-DataDownloader(stock, ticker)
+    # asset_equity = {
+    #     d._name: pd.Series(strategy.asset_value[d], index=pd.to_datetime(strategy.asset_dates))
+    #     for d in strategy.datas
+    # }
+    #     # print(asset_equity)
 
-BackTest(ticker, Mark0)
+    # asset_df = pd.DataFrame(asset_equity)
+    # # print(asset_df)
+    # print(asset_df.columns)
+
+    trades_df = pd.DataFrame(strategy.trades)
+    # print(trades_df.head())
+    trades_df.to_csv("trades_log.csv", index=False)
+
+    # PnL per Trade
+    fig = px.bar(
+        trades_df,
+        x=trades_df.index,
+        y="pnl_net",
+        color="symbol",
+        title="PnL per Trade"
+    )
+    fig.show()
+
+    # Portfolio equity curve
+    port_series = pd.Series(
+        strategy.portfolio_value,
+        index=pd.to_datetime(strategy.asset_dates),
+        name="portfolio_value"
+    )
+
+    # Per-asset position value over time
+    asset_equity = {
+        d._name: pd.Series(strategy.asset_value[d],
+                        index=pd.to_datetime(strategy.asset_dates))
+        for d in strategy.datas
+    }
+    asset_df = pd.DataFrame(asset_equity)
+
+    pnl_equity = {
+        d._name: pd.Series(strategy.asset_pnl[d],
+                        index=pd.to_datetime(strategy.asset_pnl_dates))
+        for d in strategy.datas
+    }
+    pnl_df = pd.DataFrame(pnl_equity)
+
+    # Portfolio equity
+    fig_port = px.line(
+        x=port_series.index,
+        y=port_series.values,
+        title="Portfolio Equity"
+    )
+    fig_port.show()
+
+    fig_port = px.line(
+        pnl_df,
+        x=pnl_df.index,
+        y=pnl_df.columns,
+        title="PnL of each stock"
+    )
+    fig_port.show()
+
+    # # Per-asset position equity on the same timeline
+    # fig_assets = px.line(
+    #     asset_df,
+    #     x=asset_df.index,
+    #     y=asset_df.columns,
+    #     title="Per-Asset Position Value"
+    # )
+    # fig_assets.show()
+
+
+    # scheme = PlotScheme(decimal_places=2)
+    # figs = cerebro.plot(BacktraderPlotly(show=False, scheme=scheme))
+    # for run_figs in figs:
+    #     for fig in run_figs:
+    #         fig.show()
+
+    # fig = px.line(df, x='datetime', y='portfolio_value', title='Portfolio Value Over Time')
+    # fig.show()
+    
+    # Get the returns dictionary and convert to a Pandas DataFrame
+    returns_dict = strategy.analyzers.time_return.get_analysis()
+    returns_df = pd.DataFrame(list(returns_dict.items()), columns=['date', 'return'])
+    returns_df = returns_df.set_index('date')['return']
+    returns_df.index = pd.to_datetime(returns_df.index) # Ensure the index is datetime
+
+    qs.reports.html(returns_df, output='backtest_report.html', title='My Strategy Performance')
+
+    # print("asset_df columns:", asset_df.columns)
+    # print(asset_df.describe())
+
+
+    # for col in asset_df.columns:
+    #     returns = asset_df[col].pct_change().dropna()
+    #     print(f"{col} returns head:\n", returns.head())
+
+    #     # Only skip if truly empty
+    #     if returns.empty:
+    #         continue
+
+    #     qs.reports.html(
+    #         returns,
+    #         output=f"{col}_report.html",   # unique file per stock
+    #         title=f"{col} Performance"
+    #     )
+
+
+    #   cerebro.plot()
+
+# ticker_num = input("How many stocks to test: ")
+# tickers = []
+# for i in range(int(ticker_num)):
+#     ticker = input("Enter Stock: ")
+#     tickers.append(ticker)
+# print(tickers)
+
+tickers = ["NVDA","AAPL","GOOG","GOOGL","MSFT","AMZN","AVGO","META","TSLA","WMT","LLY","JPM","V","ORCL","MA","JNJ","XOM","PLTR","NFLX","BAC","ABBV","COST","HD","AMD","PG","GE","UNH","CSCO","KO","CVX","WFC","IBM","MS","CAT","GS","MU","AXP","MRK","CRM","RTX","PM","APP","MCD","TMUS","ABT","TMO","PEP","AMAT","LRCX","C","DIS","LIN","ISRG","QCOM","INTU","BX","INTC","NOW","BLK","UBER","T","TJX","VZ","SCHW","AMGN","BKNG","NEE","ACN","TXN","DHR","APH","ANET","KLAC","BA","SPGI","COF","GILD","ADBE","PFE","UNP","LOW","PGR","BSX","ADI","SYK","PANW","DE","ETN","WELL","MDT","CRWD","PLD","HON","KKR","CB","COP","VRTX","PH","LMT","HCA","CEG","ADP","HOOD","NEM","BMY","CVS","MCK","NKE","CMCSA","CME","MO","DASH","SBUX","ICE","SO","MMC","GD","MMM","DUK","CDNS","WM","MCO","TT","SNPS","DELL","APO","UPS","AMT","USB","PNC","BK","NOC","SHW","MAR","ELV","HWM","ORLY","ABNB","EMR","REGN","RCL","AON","GM","GLW","CTAS","ITW","ECL","WBD","EQIX","CI","WMB","TDG","MNST","COIN","CMI","JCI","MDLZ","CSX","SPG","FCX","TEL","COR","FDX","NSC","RSG","AJG","PWR","HLT","TFC","TRV","CL","ADSK","STX","FTNT","AEP","MSI","WDC","KMI","WDAY","SLB","ROST","EOG","PCAR","SRE","PYPL","AFL","VST","NXPI","BDX","AZO","PSX","ARES","IDXX","MPC","F","ALL","MET","APD","DLR","LHX","NDAQ","O","ZTS","URI","VLO","DDOG","EA","D","GWW","PSA","FAST","EW","ROP","CMG","CAH","CBRE","AME","OKE","BKR","AMP","AIG","DHI","ROK","MPWR","DAL","FANG","CTVA","TTWO","CARR","AXON","XEL","LVS","EXC","TGT","FICO","YUM","ETR","PAYX","MSCI","PRU","TKO","CTSH","OXY","KDP","GRMN","KR","CCI","A","XYZ","PEG","TRGP","VMC","EBAY","GEHC","MLM","IQV","NUE","HIG","EL","CPRT","FISV","HSY","VTR","RMD","WAB","MCHP","CCL","KEYS","STT","SYY","ED","FIS","EQT","UAL","OTIS","KMB","ACGL","WEC","EXPE","XYL","ODFL","PCG","LYV","KVUE","IR","HUM","RJF","FITB","FOXA","HPE","MTB","WTW","NRG","VICI","SYF","TER","VRSK","CHTR","EXR","FOX","LEN","DG","KHC","CSGP","ROL","ADM","IBKR","MTD","HBAN","EME","BRO","TSCO","FSLR","DOV","ATO","EFX","DTE","EXE","BR","ULTA","CBOE","WRB","AEE","NTRS","DXCM","CINF","DLTR","AWK","STZ","FE","ES","BIIB","OMC","TPR","PPL","STLD","CFG","AVB","GIS","STE","CNP","PHM","IRM","VLTO","TDY","LDOS","RF","HAL","LULU","HUBB","EQR","JBL","DVN","PPG","WAT","NTAP","TROW","HPQ","KEY","RL","EIX","VRSN","WSM","ON","CPAY","LH","L","NVR","LUV","CMS","DRI","TSN","PTC","PODD","SBAC","IP","EXPD","CHD","DGX","CNC","CTRA","NI","PFG","TYL","GPN","SMCI","TPL","WST","TRMB","AMCR","JBHT","CDW","INCY","CHRW","PKG","GPC","SNA","ZBH","BG","MKC","LII","TTD","FTV","PNR","ESS","DD","GEN","DOW","APTV","EVRG","GDDY","WY","IT","LNT","HOLX","INVH","IFF","J","COO","MAA","ALB","BBY","TXT","NWS","FFIV","PSKY","ERIE","DECK","NWSA","DPZ","LYB","AVY","UHS","ALLE","EG","KIM","BALL","ZBRA","JKHY","VTRS","IEX","MAS","HRL","NDSN","UDR","HII","HST","WYNN","CLX","BXP","REG","AKAM","CF","BEN","BLDR","ALGN","DOC","SWK","IVZ","EPAM","MRNA","AIZ","HAS","RVTY","CPT","GL","DAY","FDS","SJM","PNW","MGM","SWKS","AES","BAX","AOS","CRL","NCLH","GNRC","TAP","APA","PAYC","TECH","HSIC","POOL","MOH","FRT","CPB","DVA","CAG","MOS","LW","ARE","LKQ","MTCH","MHK"]
+
+# tickers = ["TSLA"]
+
+# DataDownloader(tickers)
+
+BackTest(tickers, mark1)
