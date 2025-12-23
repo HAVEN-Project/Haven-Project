@@ -104,11 +104,6 @@ for ticker in tickers:
         continue
     # lastdate = datetime.date(last_da)
     # today = datetime.strptime(today, date_format).date()
-    # if (DEBUG == True):
-    #     print(f"Last date: {last_date}")
-    #     print(f"Today: {today}")
-    #     print (f"Current Time: {current_time}")
-    #     print(f"Target Time: {target_time}")
 
     try:
         if(last_date == None):
@@ -116,7 +111,8 @@ for ticker in tickers:
         last_date = datetime.strptime(last_date, date_format).date()
         if isinstance(today, str):
             today = datetime.strptime(today, date_format).date()
-        if(last_date == today or (current_time < target_time and (today - timedelta(days=1) == last_date))):
+        logger.debug(f"today is {today} |  last date is {last_date}  |   ")
+        if(last_date == today or (current_time < target_time and (today - timedelta(days=1) == last_date) and today.weekday() != 0)):
             # print(f"Data For {ticker} already Acquired for today. ID: {id}")
             logger.error(f"Data For {ticker} already Acquired for today. ID: {id}")
             error_count += 1
@@ -133,7 +129,7 @@ for ticker in tickers:
             raise Exception
             
     except Exception:
-        logger.exception("Failed to download data through Yfinance")
+        logger.exception(f"Failed to download data through Yfinance for {ticker}")
         error_count += 1
         continue
 
